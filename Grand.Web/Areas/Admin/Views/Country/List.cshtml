@@ -3,7 +3,7 @@
     //page title
     ViewBag.Title = T("Admin.Configuration.Countries").Text;
 }
-<antiforgery-token />
+
 <div class="row">
     <div class="col-md-12">
         <div class="x_panel light form-fit">
@@ -13,7 +13,7 @@
                     @T("Admin.Configuration.Countries")
                 </div>
                 <div class="actions btn-group btn-group-devided">
-                    <a href="@Url.Action("Create")" class="btn green"><i class="fa fa-plus"></i><span class="hidden-xs"> @T("Admin.Common.AddNew") </span></a>
+                    <a href="@Url.Action("Create")" class="btn green"><i class="fa fa-plus"></i><span class="d-none d-sm-inline"> @T("Admin.Common.AddNew") </span></a>
                     <input type="button" id="publish-selected" class="btn default" value="@T("Admin.Configuration.Countries.PublishSelected")" />
                     <input type="button" id="unpublish-selected" class="btn default" value="@T("Admin.Configuration.Countries.UnpublishSelected")" />
                     <a href="@Url.Action("ExportCsv")" class="btn blue">@T("Admin.Configuration.Countries.ExportToCsv")</a>
@@ -33,7 +33,7 @@
                     </div>
                     <div class="form-actions">
                         <div class="row">
-                            <div class="col-md-offset-3 col-sm-offset-3 col-md-9 col-sm-9">
+                            <div class="offset-md-3 offset-sm-3 col-md-9 col-sm-9">
                                 <button class="btn btn-success filter-submit" id="search-countries">
                                     <i class="fa fa-search"></i> @T("Admin.Common.Search")
                                 </button>
@@ -145,7 +145,7 @@
     });
 </script>
 
-<script type="text/javascript">
+<script>
         var selectedIds = [];
 
         $(document).ready(function () {
@@ -252,8 +252,8 @@
 
 @*import states form*@
 <div id="importcsv-window" style="display:none;">
-    <form asp-controller="Country" asp-action="ImportCsv" method="post" enctype="multipart/form-data">
-        <antiforgery-token />
+    <form asp-area="Admin" asp-controller="Country" asp-action="ImportCsv" method="post" enctype="multipart/form-data">
+        
         <table style="text-align:left;">
             <tr>
                 <td>
@@ -271,7 +271,7 @@
         </table>
     </form>
 </div>
-<script type="text/javascript">
+<script>
     $(document).ready(function () {
         $("#importcsv").click(function (e) {
             e.preventDefault();
@@ -289,7 +289,7 @@
     });
 </script>
 
-<script type="text/javascript">
+<script>
 
     $(document).ready(function () {
         //search button

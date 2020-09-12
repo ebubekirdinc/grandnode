@@ -1,4 +1,4 @@
-﻿using Grand.Core.Domain.Messages;
+﻿using Grand.Domain.Messages;
 using Grand.Framework.Controllers;
 using Grand.Framework.Kendoui;
 using Grand.Framework.Mvc.Filters;
@@ -29,8 +29,6 @@ namespace Grand.Web.Areas.Admin.Controllers
         private readonly ILocalizationService _localizationService;
         private readonly IMessageTokenProvider _messageTokenProvider;
         private readonly IStoreService _storeService;
-        private readonly IStoreMappingService _storeMappingService;
-        private readonly IWorkflowMessageService _workflowMessageService;
         private readonly EmailAccountSettings _emailAccountSettings;
 
         #endregion Fields
@@ -39,23 +37,19 @@ namespace Grand.Web.Areas.Admin.Controllers
 
         public MessageTemplateController(IMessageTemplateService messageTemplateService,
             IEmailAccountService emailAccountService,
-            ILanguageService languageService, 
-            ILocalizationService localizationService, 
-            IMessageTokenProvider messageTokenProvider, 
+            ILanguageService languageService,
+            ILocalizationService localizationService,
+            IMessageTokenProvider messageTokenProvider,
             IStoreService storeService,
-            IStoreMappingService storeMappingService,
-            IWorkflowMessageService workflowMessageService,
             EmailAccountSettings emailAccountSettings)
         {
-            this._messageTemplateService = messageTemplateService;
-            this._emailAccountService = emailAccountService;
-            this._languageService = languageService;
-            this._localizationService = localizationService;
-            this._messageTokenProvider = messageTokenProvider;
-            this._storeService = storeService;
-            this._storeMappingService = storeMappingService;
-            this._workflowMessageService = workflowMessageService;
-            this._emailAccountSettings = emailAccountSettings;
+            _messageTemplateService = messageTemplateService;
+            _emailAccountService = emailAccountService;
+            _languageService = languageService;
+            _localizationService = localizationService;
+            _messageTokenProvider = messageTokenProvider;
+            _storeService = storeService;
+            _emailAccountSettings = emailAccountSettings;
         }
 
         #endregion
@@ -70,11 +64,12 @@ namespace Grand.Web.Areas.Admin.Controllers
             //stores
             model.AvailableStores.Add(new SelectListItem { Text = _localizationService.GetResource("Admin.Common.All"), Value = "" });
             foreach (var s in await _storeService.GetAllStores())
-                model.AvailableStores.Add(new SelectListItem { Text = s.Name, Value = s.Id.ToString() });
+                model.AvailableStores.Add(new SelectListItem { Text = s.Shortcut, Value = s.Id.ToString() });
 
             return View(model);
         }
 
+        [PermissionAuthorizeAction(PermissionActionName.List)]
         [HttpPost]
         public async Task<IActionResult> List(DataSourceRequest command, MessageTemplateListModel model)
         {
@@ -91,20 +86,19 @@ namespace Grand.Web.Areas.Admin.Controllers
             {
                 var templateModel = x.ToModel();
                 await templateModel.PrepareStoresMappingModel(x, _storeService, false);
-                var stores =(await _storeService
+                var stores = (await _storeService
                         .GetAllStores())
                         .Where(s => !x.LimitedToStores || templateModel.SelectedStoreIds.Contains(s.Id))
                         .ToList();
                 for (int i = 0; i < stores.Count; i++)
                 {
-                    templateModel.ListOfStores += stores[i].Name;
+                    templateModel.ListOfStores += stores[i].Shortcut;
                     if (i != stores.Count - 1)
                         templateModel.ListOfStores += ", ";
                 }
                 items.Add(templateModel);
             }
-            var gridModel = new DataSourceResult
-            {
+            var gridModel = new DataSourceResult {
                 Data = items,
                 Total = messageTemplates.Count
             };
@@ -112,6 +106,7 @@ namespace Grand.Web.Areas.Admin.Controllers
             return Json(gridModel);
         }
 
+        [PermissionAuthorizeAction(PermissionActionName.Create)]
         public async Task<IActionResult> Create()
         {
             var model = new MessageTemplateModel();
@@ -126,6 +121,7 @@ namespace Grand.Web.Areas.Admin.Controllers
             return View(model);
         }
 
+        [PermissionAuthorizeAction(PermissionActionName.Create)]
         [HttpPost, ParameterBasedOnFormName("save-continue", "continueEditing")]
         public async Task<IActionResult> Create(MessageTemplateModel model, bool continueEditing)
         {
@@ -145,7 +141,7 @@ namespace Grand.Web.Areas.Admin.Controllers
                 if (continueEditing)
                 {
                     //selected tab
-                    SaveSelectedTabIndex();
+                    await SaveSelectedTabIndex();
 
                     return RedirectToAction("Edit", new { id = messageTemplate.Id });
                 }
@@ -164,6 +160,7 @@ namespace Grand.Web.Areas.Admin.Controllers
             return View(model);
         }
 
+        [PermissionAuthorizeAction(PermissionActionName.Preview)]
         public async Task<IActionResult> Edit(string id)
         {
             var messageTemplate = await _messageTemplateService.GetMessageTemplateById(id);
@@ -195,6 +192,7 @@ namespace Grand.Web.Areas.Admin.Controllers
             return View(model);
         }
 
+        [PermissionAuthorizeAction(PermissionActionName.Edit)]
         [HttpPost, ParameterBasedOnFormName("save-continue", "continueEditing")]
         [FormValueRequired("save", "save-continue")]
         public async Task<IActionResult> Edit(MessageTemplateModel model, bool continueEditing)
@@ -220,7 +218,7 @@ namespace Grand.Web.Areas.Admin.Controllers
                 if (continueEditing)
                 {
                     //selected tab
-                    SaveSelectedTabIndex();
+                    await SaveSelectedTabIndex();
 
                     return RedirectToAction("Edit", new { id = messageTemplate.Id });
                 }
@@ -238,7 +236,8 @@ namespace Grand.Web.Areas.Admin.Controllers
 
             return View(model);
         }
-
+        
+        [PermissionAuthorizeAction(PermissionActionName.Delete)]
         [HttpPost]
         public async Task<IActionResult> Delete(string id)
         {
@@ -253,6 +252,7 @@ namespace Grand.Web.Areas.Admin.Controllers
             return RedirectToAction("List");
         }
 
+        [PermissionAuthorizeAction(PermissionActionName.Edit)]
         [HttpPost, ActionName("Edit")]
         [FormValueRequired("message-template-copy")]
         public async Task<IActionResult> CopyTemplate(MessageTemplateModel model)

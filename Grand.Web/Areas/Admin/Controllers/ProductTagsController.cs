@@ -1,4 +1,4 @@
-﻿using Grand.Core.Domain.Seo;
+﻿using Grand.Domain.Seo;
 using Grand.Framework.Extensions;
 using Grand.Framework.Kendoui;
 using Grand.Framework.Mvc;
@@ -11,6 +11,7 @@ using Grand.Web.Areas.Admin.Extensions;
 using Grand.Web.Areas.Admin.Models.Catalog;
 using Microsoft.AspNetCore.Mvc;
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -25,44 +26,47 @@ namespace Grand.Web.Areas.Admin.Controllers
         private readonly SeoSettings _seoSettings;
         public ProductTagsController(IProductTagService productTagService, IProductService productService, ILanguageService languageService, SeoSettings seoSettings)
         {
-            this._productTagService = productTagService;
-            this._productService = productService;
-            this._languageService = languageService;
-            this._seoSettings = seoSettings;
+            _productTagService = productTagService;
+            _productService = productService;
+            _languageService = languageService;
+            _seoSettings = seoSettings;
         }
 
         public IActionResult Index() => RedirectToAction("List");
 
         public IActionResult List() => View();
 
+        [PermissionAuthorizeAction(PermissionActionName.List)]
         [HttpPost]
         public async Task<IActionResult> List(DataSourceRequest command)
         {
-            var tags = (await _productTagService.GetAllProductTags())
-                //order by product count
-                .OrderByDescending(x => _productTagService.GetProductCount(x.Id, ""))
-                .Select(x => new ProductTagModel
-                {
-                    Id = x.Id,
-                    Name = x.Name,
-                    ProductCount = _productTagService.GetProductCount(x.Id, "")
-                })
-                .ToList();
+            var tags = (await _productTagService.GetAllProductTags());
+            var productTags = new List<ProductTagModel>();
+            foreach (var item in tags)
+            {
+                var ptag = new ProductTagModel();
+                ptag.Id = item.Id;
+                ptag.Name = item.Name;
+                ptag.ProductCount = await _productTagService.GetProductCount(item.Id, "");
+                productTags.Add(ptag);
+            }
 
             var gridModel = new DataSourceResult
             {
-                Data = tags.PagedForCommand(command),
-                Total = tags.Count
+                Data = productTags.OrderByDescending(x=>x.ProductCount).PagedForCommand(command),
+                Total = tags.Count()
             };
 
             return Json(gridModel);
         }
+
+        [PermissionAuthorizeAction(PermissionActionName.Preview)]
         [HttpPost]
         public async Task<IActionResult> Products(string tagId, DataSourceRequest command)
         {
             var tag = await _productTagService.GetProductTagById(tagId);
 
-            var products = (await _productService.SearchProducts(pageIndex: command.Page - 1, pageSize: command.PageSize, productTag: tag.Name, orderBy: Core.Domain.Catalog.ProductSortingEnum.NameAsc)).products;
+            var products = (await _productService.SearchProducts(pageIndex: command.Page - 1, pageSize: command.PageSize, productTag: tag.Name, orderBy: Domain.Catalog.ProductSortingEnum.NameAsc)).products;
             var gridModel = new DataSourceResult
             {
                 Data = products.Select(x => new
@@ -77,6 +81,7 @@ namespace Grand.Web.Areas.Admin.Controllers
         }
 
         //edit
+        [PermissionAuthorizeAction(PermissionActionName.Preview)]
         public async Task<IActionResult> Edit(string id)
         {
             var productTag = await _productTagService.GetProductTagById(id);
@@ -88,7 +93,7 @@ namespace Grand.Web.Areas.Admin.Controllers
             {
                 Id = productTag.Id,
                 Name = productTag.Name,
-                ProductCount = _productTagService.GetProductCount(productTag.Id, "")
+                ProductCount = await _productTagService.GetProductCount(productTag.Id, "")
             };
             //locales
             await AddLocales(_languageService, model.Locales, (locale, languageId) =>
@@ -99,6 +104,7 @@ namespace Grand.Web.Areas.Admin.Controllers
             return View(model);
         }
 
+        [PermissionAuthorizeAction(PermissionActionName.Edit)]
         [HttpPost]
         public async Task<IActionResult> Edit(ProductTagModel model)
         {
@@ -120,6 +126,7 @@ namespace Grand.Web.Areas.Admin.Controllers
             return View(model);
         }
 
+        [PermissionAuthorizeAction(PermissionActionName.Delete)]
         [HttpPost]
         public async Task<IActionResult> Delete(string id)
         {

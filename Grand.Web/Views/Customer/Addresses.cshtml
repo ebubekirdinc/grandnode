@@ -1,16 +1,18 @@
 ﻿@model CustomerAddressListModel
 @using Grand.Web.Models.Customer;
+@inject IPageHeadBuilder pagebuilder
 @{
     Layout = "_ColumnsTwo";
 
     //title
-    Html.AddTitleParts(T("PageTitle.Account").Text);
+    pagebuilder.AddTitleParts(T("PageTitle.Account").Text);
 }
 @section left
 {
     @await Component.InvokeAsync("CustomerNavigation", new { selectedTabId = CustomerNavigationEnum.Addresses })
 }
 <div class="page account-page address-list-page pl-lg-3 pt-lg-0 pt-3">
+    @Html.AntiForgeryToken()
     <a class="js-offcanvas-trigger blog-filter filter-button btn btn-outline-info d-lg-none d-flex mb-3" data-offcanvas-trigger="leftSide" href="#leftSide"><span class="mdi mdi-tune"></span><span class="ml-3">@T("Account.Navigation")</span></a>
     <button type="button" class="btn btn-info btn-sm add-address-button float-sm-right" onclick="location.href='@Url.RouteUrl("CustomerAddressAdd")'">
         <i class="fa fa-plus" aria-hidden="true"></i> @T("Common.AddNew")
@@ -18,11 +20,12 @@
     <h1 class="h2 generalTitle">@T("Account.CustomerAddresses")</h1>
     @if (Model.Addresses.Any())
     {
-        <div class="row px-3 address-list">
+        <div class="col-12 px-0">
+            <div class="row address-list">
                 @for (int i = 0; i < Model.Addresses.Count; i++)
                 {
                     var address = Model.Addresses[i];
-                    <div class="col-md-6 col-12 pl-lg-0 mb-3">
+                    <div class="col-md-6 col-12 mb-3">
                         <div class="card">
                             <div class="card-header">
                                 <div class="card-title">
@@ -119,13 +122,14 @@
                                     </ul>
                                 </div>
                             </div>
-                            <div class="card-footer buttons text-xs-center btn-group btn-group-sm" role="group">
+                            <div class="card-footer px-0 buttons text-xs-center btn-group btn-group-sm" role="group">
                                 <input type="button" class="btn btn-secondary edit-address-button" onclick="location.href='@(Url.RouteUrl("CustomerAddressEdit", new { addressId = address.Id }))'" value='@T("Common.Edit")' />
-                                <input type="button" class="btn btn-secondary delete-address-button" onclick="deletecustomeraddress('@(address.Id)')" value="@T("Common.Delete")" />
+                                <input type="button" class="btn btn-danger delete-address-button" onclick="deletecustomeraddress('@(address.Id)')" value="@T("Common.Delete")" />
                             </div>
                         </div>
                     </div>
                 }
+            </div>
         </div>
         <script asp-location="Footer">
                 function deletecustomeraddress(addressId) {

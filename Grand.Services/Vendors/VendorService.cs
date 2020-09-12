@@ -1,6 +1,6 @@
-using Grand.Core;
-using Grand.Core.Data;
-using Grand.Core.Domain.Vendors;
+using Grand.Domain;
+using Grand.Domain.Data;
+using Grand.Domain.Vendors;
 using Grand.Services.Events;
 using MediatR;
 using MongoDB.Bson;
@@ -32,13 +32,13 @@ namespace Grand.Services.Vendors
         /// Ctor
         /// </summary>
         /// <param name="vendorRepository">Vendor repository</param>
-        /// <param name="eventPublisher">Event published</param>
+        /// <param name="mediator">Mediator</param>
         public VendorService(IRepository<Vendor> vendorRepository, IRepository<VendorReview> vendorReviewRepository,
             IMediator mediator)
         {
-            this._vendorRepository = vendorRepository;
-            this._vendorReviewRepository = vendorReviewRepository;
-            this._mediator = mediator;
+            _vendorRepository = vendorRepository;
+            _vendorReviewRepository = vendorReviewRepository;
+            _mediator = mediator;
         }
 
         #endregion
@@ -291,7 +291,9 @@ namespace Grand.Services.Vendors
             var update = Builders<VendorReview>.Update
                 .Set(x => x.Title, vendorreview.Title)
                 .Set(x => x.ReviewText, vendorreview.ReviewText)
-                .Set(x => x.IsApproved, vendorreview.IsApproved);
+                .Set(x => x.IsApproved, vendorreview.IsApproved)
+                .Set(x => x.HelpfulYesTotal, vendorreview.HelpfulYesTotal)
+                .Set(x => x.HelpfulNoTotal, vendorreview.HelpfulNoTotal);
 
             await _vendorReviewRepository.Collection.UpdateManyAsync(filter, update);
 
@@ -348,17 +350,16 @@ namespace Grand.Services.Vendors
         /// <returns>Vendors</returns>
         public virtual async Task<IList<Vendor>> SearchVendors(
             string vendorId = "",
-            string keywords = null
-            )
+            string keywords = null)
         {
             //vendors
             var builder = Builders<Vendor>.Filter;
             var filter = FilterDefinition<Vendor>.Empty;
 
             //searching by keyword
-            if (!String.IsNullOrWhiteSpace(keywords))
+            if (!string.IsNullOrWhiteSpace(keywords))
             {
-                filter = filter & builder.Where(p =>
+                filter &= builder.Where(p =>
                         p.Name.ToLower().Contains(keywords.ToLower())
                         ||
                         p.Locales.Any(x => x.LocaleKey == "Name" && x.LocaleValue != null && x.LocaleValue.ToLower().Contains(keywords.ToLower()))
@@ -366,12 +367,11 @@ namespace Grand.Services.Vendors
             }
 
             //vendor filtering
-            if (!String.IsNullOrEmpty(vendorId))
+            if (!string.IsNullOrEmpty(vendorId))
             {
-                filter = filter & builder.Where(x => x.Id == vendorId);
+                filter &= builder.Where(x => x.Id == vendorId);
             }
-            var vendors = _vendorRepository.FindByFilterDefinition(filter);
-            return await Task.FromResult(vendors);
+            return await _vendorRepository.Collection.Find(filter).ToListAsync();
         }
 
         #endregion

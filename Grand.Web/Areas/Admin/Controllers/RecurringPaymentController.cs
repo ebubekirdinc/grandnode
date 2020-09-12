@@ -1,6 +1,6 @@
 ﻿using Grand.Core;
-using Grand.Core.Domain.Customers;
-using Grand.Core.Domain.Orders;
+using Grand.Domain.Customers;
+using Grand.Domain.Orders;
 using Grand.Framework.Controllers;
 using Grand.Framework.Kendoui;
 using Grand.Framework.Mvc.Filters;
@@ -41,13 +41,13 @@ namespace Grand.Web.Areas.Admin.Controllers
             IWorkContext workContext, IDateTimeHelper dateTimeHelper, IPaymentService paymentService,
             ICustomerService customerService)
         {
-            this._orderService = orderService;
-            this._orderProcessingService = orderProcessingService;
-            this._localizationService = localizationService;
-            this._workContext = workContext;
-            this._dateTimeHelper = dateTimeHelper;
-            this._paymentService = paymentService;
-            this._customerService = customerService;
+            _orderService = orderService;
+            _orderProcessingService = orderProcessingService;
+            _localizationService = localizationService;
+            _workContext = workContext;
+            _dateTimeHelper = dateTimeHelper;
+            _paymentService = paymentService;
+            _customerService = customerService;
         }
 
         #endregion
@@ -112,6 +112,7 @@ namespace Grand.Web.Areas.Admin.Controllers
 
         public IActionResult List() => View();
 
+        [PermissionAuthorizeAction(PermissionActionName.List)]
         [HttpPost]
         public async Task<IActionResult> List(DataSourceRequest command)
         {
@@ -132,6 +133,7 @@ namespace Grand.Web.Areas.Admin.Controllers
         }
 
         //edit
+        [PermissionAuthorizeAction(PermissionActionName.Preview)]
         public async Task<IActionResult> Edit(string id)
         {
             var payment = await _orderService.GetRecurringPaymentById(id);
@@ -144,6 +146,7 @@ namespace Grand.Web.Areas.Admin.Controllers
             return View(model);
         }
 
+        [PermissionAuthorizeAction(PermissionActionName.Edit)]
         [HttpPost, ParameterBasedOnFormName("save-continue", "continueEditing")]
         [FormValueRequired("save", "save-continue")]
         public async Task<IActionResult> Edit(RecurringPaymentModel model, bool continueEditing)
@@ -164,7 +167,7 @@ namespace Grand.Web.Areas.Admin.Controllers
             if (continueEditing)
             {
                 //selected tab
-                SaveSelectedTabIndex();
+                await SaveSelectedTabIndex();
 
                 return RedirectToAction("Edit",  new {id = payment.Id});
             }
@@ -172,6 +175,7 @@ namespace Grand.Web.Areas.Admin.Controllers
         }
 
         //delete
+        [PermissionAuthorizeAction(PermissionActionName.Delete)]
         [HttpPost]
         public async Task<IActionResult> Delete(string id)
         {
@@ -190,6 +194,7 @@ namespace Grand.Web.Areas.Admin.Controllers
 
         #region History
 
+        [PermissionAuthorizeAction(PermissionActionName.Preview)]
         [HttpPost]
         public async Task<IActionResult> HistoryList(string recurringPaymentId, DataSourceRequest command)
         {
@@ -212,6 +217,7 @@ namespace Grand.Web.Areas.Admin.Controllers
             return Json(gridModel);
         }
 
+        [PermissionAuthorizeAction(PermissionActionName.Edit)]
         [HttpPost, ActionName("Edit")]
         [FormValueRequired("processnextpayment")]
         public async Task<IActionResult> ProcessNextPayment(string id)
@@ -230,7 +236,7 @@ namespace Grand.Web.Areas.Admin.Controllers
                 SuccessNotification(_localizationService.GetResource("Admin.RecurringPayments.NextPaymentProcessed"), false);
 
                 //selected tab
-                SaveSelectedTabIndex(persistForTheNextRequest: false);
+                await SaveSelectedTabIndex(persistForTheNextRequest: false);
 
                 return View(model);
             }
@@ -242,12 +248,13 @@ namespace Grand.Web.Areas.Admin.Controllers
                 ErrorNotification(exc, false);
 
                 //selected tab
-                SaveSelectedTabIndex(persistForTheNextRequest: false);
+                await SaveSelectedTabIndex(persistForTheNextRequest: false);
 
                 return View(model);
             }
         }
 
+        [PermissionAuthorizeAction(PermissionActionName.Edit)]
         [HttpPost, ActionName("Edit")]
         [FormValueRequired("cancelpayment")]
         public async Task<IActionResult> CancelRecurringPayment(string id)
@@ -271,7 +278,7 @@ namespace Grand.Web.Areas.Admin.Controllers
                     SuccessNotification(_localizationService.GetResource("Admin.RecurringPayments.Cancelled"), false);
 
                 //selected tab
-                SaveSelectedTabIndex(persistForTheNextRequest: false);
+                await SaveSelectedTabIndex(persistForTheNextRequest: false);
 
                 return View(model);
             }
@@ -283,7 +290,7 @@ namespace Grand.Web.Areas.Admin.Controllers
                 ErrorNotification(exc, false);
 
                 //selected tab
-                SaveSelectedTabIndex(persistForTheNextRequest: false);
+                await SaveSelectedTabIndex(persistForTheNextRequest: false);
 
                 return View(model);
             }

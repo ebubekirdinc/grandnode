@@ -3,8 +3,8 @@
     //page title
     ViewBag.Title = T("Admin.Configuration.ACL").Text;
 }
-<form asp-controller="Security" asp-action="Permissions" method="post">
-    <antiforgery-token />
+<form asp-area="Admin" asp-controller="Security" asp-action="Permissions" method="post">
+    
     <div class="row">
         <div class="col-md-12">
             <div class="x_panel light form-fit">
@@ -34,7 +34,7 @@
                                     }
                                     else
                                     {
-                                        <script type="text/javascript">
+                                        <script>
                                             $(document).ready(function () {
                                                 @foreach (var cr in Model.AvailableCustomerRoles)
                                                 {
@@ -78,6 +78,11 @@
                                                             var allowed = Model.Allowed.ContainsKey(pr.SystemName) && Model.Allowed[pr.SystemName][cr.Id];
                                                             <td style="text-align:center">
                                                                 <label class='mt-checkbox mt-checkbox-outline control control-checkbox'><input class="allow_@(cr.Id)" type="checkbox" value="@(pr.SystemName)" name="allow_@(cr.Id)" @(allowed ? " checked=checked" : null) /> <div class="control__indicator"></div></label>
+                                                                @if (pr.Actions)
+                                                                {
+                                                                    <a class='k-link' 
+                                                                       onclick="javascript:OpenWindow('@Url.Content("~/Admin/Security/PermissionsAction")?systemname=@(pr.SystemName)&customeRoleId=@cr.Id', 600, 400, true); return false;"><i class="icon-settings"></i></a>
+                                                                }
                                                             </td>
                                                         }
                                                     </tr>

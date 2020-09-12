@@ -1,5 +1,5 @@
 ﻿using Grand.Core;
-using Grand.Core.Domain.PushNotifications;
+using Grand.Domain.PushNotifications;
 using Grand.Framework.Kendoui;
 using Grand.Framework.Mvc;
 using Grand.Framework.Security.Authorization;
@@ -10,7 +10,6 @@ using Grand.Services.Localization;
 using Grand.Services.Media;
 using Grand.Services.PushNotifications;
 using Grand.Services.Security;
-using Grand.Services.Stores;
 using Grand.Web.Areas.Admin.Models.PushNotifications;
 using Microsoft.AspNetCore.Mvc;
 using System;
@@ -26,27 +25,27 @@ namespace Grand.Web.Areas.Admin.Controllers
         private readonly PushNotificationsSettings _pushNotificationsSettings;
         private readonly ILocalizationService _localizationService;
         private readonly ISettingService _settingService;
-        private readonly IStoreService _storeService;
         private readonly IPushNotificationsService _pushNotificationsService;
-        private readonly IWorkContext _workContext;
         private readonly ICustomerService _customerService;
         private readonly IPictureService _pictureService;
         private readonly IDateTimeHelper _dateTimeHelper;
 
-        public PushNotificationsController(PushNotificationsSettings pushNotificationsSettings,
-            ILocalizationService localizationService, ISettingService settingService, IStoreService storeService,
-            IPushNotificationsService pushNotificationsService, IWorkContext workContext,
-            ICustomerService customerService, IPictureService pictureService, IDateTimeHelper dateTimeHelper)
+        public PushNotificationsController(
+            PushNotificationsSettings pushNotificationsSettings,
+            ILocalizationService localizationService, 
+            ISettingService settingService, 
+            IPushNotificationsService pushNotificationsService, 
+            ICustomerService customerService, 
+            IPictureService pictureService, 
+            IDateTimeHelper dateTimeHelper)
         {
-            this._pushNotificationsSettings = pushNotificationsSettings;
-            this._localizationService = localizationService;
-            this._settingService = settingService;
-            this._storeService = storeService;
-            this._pushNotificationsService = pushNotificationsService;
-            this._workContext = workContext;
-            this._customerService = customerService;
-            this._pictureService = pictureService;
-            this._dateTimeHelper = dateTimeHelper;
+            _pushNotificationsSettings = pushNotificationsSettings;
+            _localizationService = localizationService;
+            _settingService = settingService;
+            _pushNotificationsService = pushNotificationsService;
+            _customerService = customerService;
+            _pictureService = pictureService;
+            _dateTimeHelper = dateTimeHelper;
         }
 
         public IActionResult Send()
@@ -62,6 +61,7 @@ namespace Grand.Web.Areas.Admin.Controllers
             return View(model);
         }
 
+        [PermissionAuthorizeAction(PermissionActionName.Create)]
         [HttpPost]
         public async Task<IActionResult> Send(PushModel model)
         {
@@ -89,6 +89,7 @@ namespace Grand.Web.Areas.Admin.Controllers
             return RedirectToAction("Send");
         }
 
+        [PermissionAuthorizeAction(PermissionActionName.List)]
         public async Task<IActionResult> Messages()
         {
             var model = new MessagesModel
@@ -100,6 +101,7 @@ namespace Grand.Web.Areas.Admin.Controllers
             return View(model);
         }
 
+        [PermissionAuthorizeAction(PermissionActionName.List)]
         public async Task<IActionResult> Receivers()
         {
             var model = new ReceiversModel
@@ -111,6 +113,7 @@ namespace Grand.Web.Areas.Admin.Controllers
             return View(model);
         }
 
+        [PermissionAuthorizeAction(PermissionActionName.List)]
         [HttpPost]
         public async Task<IActionResult> PushMessagesList(DataSourceRequest command)
         {
@@ -131,6 +134,7 @@ namespace Grand.Web.Areas.Admin.Controllers
             return Json(gridModel);
         }
 
+        [PermissionAuthorizeAction(PermissionActionName.List)]
         [HttpPost]
         public async Task<IActionResult> PushReceiversList(DataSourceRequest command)
         {
@@ -172,6 +176,7 @@ namespace Grand.Web.Areas.Admin.Controllers
             return Json(gridModel);
         }
 
+        [PermissionAuthorizeAction(PermissionActionName.Delete)]
         [HttpPost]
         public async Task<IActionResult> DeleteReceiver(string id)
         {

@@ -1,10 +1,8 @@
-﻿using FluentValidation.Attributes;
-using Grand.Framework.Localization;
+﻿using Grand.Framework.Localization;
 using Grand.Framework.Mapping;
 using Grand.Framework.Mvc.ModelBinding;
 using Grand.Framework.Mvc.Models;
 using Grand.Web.Areas.Admin.Models.Discounts;
-using Grand.Web.Areas.Admin.Validators.Catalog;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using System;
 using System.Collections.Generic;
@@ -12,7 +10,6 @@ using System.ComponentModel.DataAnnotations;
 
 namespace Grand.Web.Areas.Admin.Models.Catalog
 {
-    [Validator(typeof(CategoryValidator))]
     public partial class CategoryModel : BaseGrandEntityModel, ILocalizedModel<CategoryLocalizedModel>, IAclMappingModel, IStoreMappingModel
     {
         public CategoryModel()
@@ -28,31 +25,34 @@ namespace Grand.Web.Areas.Admin.Models.Catalog
         }
 
         [GrandResourceDisplayName("Admin.Catalog.Categories.Fields.Name")]
-        
+
         public string Name { get; set; }
 
         [GrandResourceDisplayName("Admin.Catalog.Categories.Fields.Description")]
-        
+
         public string Description { get; set; }
+        [GrandResourceDisplayName("Admin.Catalog.Categories.Fields.BottomDescription")]
+
+        public string BottomDescription { get; set; }
 
         [GrandResourceDisplayName("Admin.Catalog.Categories.Fields.CategoryTemplate")]
         public string CategoryTemplateId { get; set; }
         public IList<SelectListItem> AvailableCategoryTemplates { get; set; }
 
         [GrandResourceDisplayName("Admin.Catalog.Categories.Fields.MetaKeywords")]
-        
+
         public string MetaKeywords { get; set; }
 
         [GrandResourceDisplayName("Admin.Catalog.Categories.Fields.MetaDescription")]
-        
+
         public string MetaDescription { get; set; }
 
         [GrandResourceDisplayName("Admin.Catalog.Categories.Fields.MetaTitle")]
-        
+
         public string MetaTitle { get; set; }
 
         [GrandResourceDisplayName("Admin.Catalog.Categories.Fields.SeName")]
-        
+
         public string SeName { get; set; }
 
         [GrandResourceDisplayName("Admin.Catalog.Categories.Fields.Parent")]
@@ -72,7 +72,7 @@ namespace Grand.Web.Areas.Admin.Models.Catalog
         public string PageSizeOptions { get; set; }
 
         [GrandResourceDisplayName("Admin.Catalog.Categories.Fields.PriceRanges")]
-        
+
         public string PriceRanges { get; set; }
 
         [GrandResourceDisplayName("Admin.Catalog.Categories.Fields.ShowOnHomePage")]
@@ -143,7 +143,6 @@ namespace Grand.Web.Areas.Admin.Models.Catalog
 
 
         #region Nested classes
-        [Validator(typeof(CategoryProductModelValidator))]
         public partial class CategoryProductModel : BaseGrandEntityModel
         {
             public string CategoryId { get; set; }
@@ -159,7 +158,6 @@ namespace Grand.Web.Areas.Admin.Models.Catalog
             [GrandResourceDisplayName("Admin.Catalog.Categories.Products.Fields.DisplayOrder")]
             public int DisplayOrder { get; set; }
         }
-        [Validator(typeof(AddCategoryProductModelValidator))]
         public partial class AddCategoryProductModel : BaseGrandModel
         {
             public AddCategoryProductModel()
@@ -172,7 +170,7 @@ namespace Grand.Web.Areas.Admin.Models.Catalog
             }
 
             [GrandResourceDisplayName("Admin.Catalog.Products.List.SearchProductName")]
-            
+
             public string SearchProductName { get; set; }
             [GrandResourceDisplayName("Admin.Catalog.Products.List.SearchCategory")]
             public string SearchCategoryId { get; set; }
@@ -224,6 +222,10 @@ namespace Grand.Web.Areas.Admin.Models.Catalog
         [GrandResourceDisplayName("Admin.Catalog.Categories.Fields.Description")]
 
         public string Description { get; set; }
+
+        [GrandResourceDisplayName("Admin.Catalog.Categories.Fields.BottomDescription")]
+
+        public string BottomDescription { get; set; }
 
         [GrandResourceDisplayName("Admin.Catalog.Categories.Fields.MetaKeywords")]
 

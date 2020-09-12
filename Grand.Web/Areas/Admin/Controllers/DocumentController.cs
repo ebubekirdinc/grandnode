@@ -44,9 +44,12 @@ namespace Grand.Web.Areas.Admin.Controllers
 
         public IActionResult List() => View(new DocumentListModel());
 
-
+        [PermissionAuthorizeAction(PermissionActionName.List)]
         public async Task<IActionResult> ListDocuments(DataSourceRequest command, DocumentListModel model)
         {
+            if (!string.IsNullOrEmpty(model.CustomerId))
+                model.SearchEmail = (await _customerService.GetCustomerById(model.CustomerId))?.Email;
+
             var documents = await _documentViewModelService.PrepareDocumentListModel(model, command.Page, command.PageSize);
             var gridModel = new DataSourceResult {
                 Data = documents.documetListModel,
@@ -55,6 +58,7 @@ namespace Grand.Web.Areas.Admin.Controllers
             return Json(gridModel);
         }
 
+        [PermissionAuthorizeAction(PermissionActionName.Create)]
         public async Task<IActionResult> CreateDocument(SimpleDocumentModel simpleModel)
         {
             var model = await _documentViewModelService.PrepareDocumentModel(null, null, simpleModel);
@@ -67,6 +71,7 @@ namespace Grand.Web.Areas.Admin.Controllers
             return View(model);
         }
 
+        [PermissionAuthorizeAction(PermissionActionName.Edit)]
         [HttpPost, ParameterBasedOnFormName("save-continue", "continueEditing")]
         public async Task<IActionResult> CreateDocument(DocumentModel model, bool continueEditing)
         {
@@ -96,6 +101,7 @@ namespace Grand.Web.Areas.Admin.Controllers
             return View(model);
         }
 
+        [PermissionAuthorizeAction(PermissionActionName.Preview)]
         public async Task<IActionResult> EditDocument(string id)
         {
             var document = await _documentService.GetById(id);
@@ -112,6 +118,7 @@ namespace Grand.Web.Areas.Admin.Controllers
             return View(model);
         }
 
+        [PermissionAuthorizeAction(PermissionActionName.Edit)]
         [HttpPost]
         [ParameterBasedOnFormName("save-continue", "continueEditing")]
         [FormValueRequired("save", "save-continue")]
@@ -147,6 +154,7 @@ namespace Grand.Web.Areas.Admin.Controllers
             return View(model);
         }
 
+        [PermissionAuthorizeAction(PermissionActionName.Delete)]
         [HttpPost]
         public async Task<IActionResult> DeleteDocument(string id)
         {
@@ -171,6 +179,7 @@ namespace Grand.Web.Areas.Admin.Controllers
 
         public IActionResult Types() => View();
 
+        [PermissionAuthorizeAction(PermissionActionName.List)]
         public async Task<IActionResult> ListType()
         {
             var types = await _documentTypeService.GetAll();
@@ -180,12 +189,15 @@ namespace Grand.Web.Areas.Admin.Controllers
             };
             return Json(gridModel);
         }
+
+        [PermissionAuthorizeAction(PermissionActionName.Create)]
         public IActionResult CreateType()
         {
             var model = new DocumentTypeModel();
             return View(model);
         }
 
+        [PermissionAuthorizeAction(PermissionActionName.Edit)]
         [HttpPost, ParameterBasedOnFormName("save-continue", "continueEditing")]
         public async Task<IActionResult> CreateType(DocumentTypeModel model, bool continueEditing)
         {
@@ -203,6 +215,7 @@ namespace Grand.Web.Areas.Admin.Controllers
             return View(model);
         }
 
+        [PermissionAuthorizeAction(PermissionActionName.Preview)]
         public async Task<IActionResult> EditType(string id)
         {
             var documentType = await _documentTypeService.GetById(id);
@@ -213,6 +226,7 @@ namespace Grand.Web.Areas.Admin.Controllers
             return View(model);
         }
 
+        [PermissionAuthorizeAction(PermissionActionName.Edit)]
         [HttpPost]
         [ParameterBasedOnFormName("save-continue", "continueEditing")]
         [FormValueRequired("save", "save-continue")]
@@ -237,6 +251,7 @@ namespace Grand.Web.Areas.Admin.Controllers
             return View(model);
         }
 
+        [PermissionAuthorizeAction(PermissionActionName.Delete)]
         [HttpPost]
         public async Task<IActionResult> DeleteType(string id)
         {

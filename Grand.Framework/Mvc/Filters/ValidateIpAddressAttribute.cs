@@ -1,5 +1,5 @@
 ﻿using Grand.Core;
-using Grand.Core.Domain.Security;
+using Grand.Domain.Security;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Controllers;
 using Microsoft.AspNetCore.Mvc.Filters;
@@ -39,8 +39,8 @@ namespace Grand.Framework.Mvc.Filters
             public ValidateIpAddressFilter(IWebHelper webHelper,
                 SecuritySettings securitySettings)
             {
-                this._webHelper = webHelper;
-                this._securitySettings = securitySettings;
+                _webHelper = webHelper;
+                _securitySettings = securitySettings;
             }
 
             #endregion
@@ -81,7 +81,7 @@ namespace Grand.Framework.Mvc.Filters
                     actionName.Equals("AccessDenied", StringComparison.OrdinalIgnoreCase)))
                 {
                     //redirect to 'Access denied' page
-                    context.Result = new RedirectToActionResult("AccessDenied", "Security", context.RouteData.Values);
+                    context.Result = new RedirectToActionResult("AccessDenied", "Home", context.RouteData.Values);
                 }
             }
 

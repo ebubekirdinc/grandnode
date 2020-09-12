@@ -1,5 +1,5 @@
-using Grand.Core.Domain.Customers;
-using Grand.Core.Domain.Security;
+using Grand.Domain.Customers;
+using Grand.Domain.Security;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
@@ -47,25 +47,7 @@ namespace Grand.Services.Security
         /// </summary>
         /// <param name="permission">Permission</param>
         Task UpdatePermissionRecord(PermissionRecord permission);
-
-        /// <summary>
-        /// Install permissions
-        /// </summary>
-        /// <param name="permissionProvider">Permission provider</param>
-        Task InstallPermissions(IPermissionProvider permissionProvider);
-
-        /// <summary>
-        /// Install missing permissions
-        /// </summary>
-        /// <param name="permissionProvider">Permission provider</param>
-        Task InstallNewPermissions(IPermissionProvider permissionProvider);
-
-        /// <summary>
-        /// Uninstall permissions
-        /// </summary>
-        /// <param name="permissionProvider">Permission provider</param>
-        Task UninstallPermissions(IPermissionProvider permissionProvider);
-
+       
         /// <summary>
         /// Authorize permission
         /// </summary>
@@ -95,5 +77,34 @@ namespace Grand.Services.Security
         /// <param name="customer">Customer</param>
         /// <returns>true - authorized; otherwise, false</returns>
         Task<bool> Authorize(string permissionRecordSystemName, Customer customer);
+
+        /// <summary>
+        /// Gets a permission actions
+        /// </summary>
+        /// <param name="systemName">Permission system name</param>
+        /// <param name="customeroleId">Customer role ident</param>
+        /// <returns>Permission action</returns>
+        Task<IList<PermissionAction>> GetPermissionActions(string systemName, string customeroleId);
+
+        /// <summary>
+        /// Inserts a permission action record
+        /// </summary>
+        /// <param name="permission">Permission</param>
+        Task InsertPermissionActionRecord(PermissionAction permissionAction);
+
+        /// <summary>
+        /// Inserts a permission action record
+        /// </summary>
+        /// <param name="permission">Permission</param>
+        Task DeletePermissionActionRecord(PermissionAction permissionAction);
+
+        /// <summary>
+        /// Authorize permission for action
+        /// </summary>
+        /// <param name="permissionRecordSystemName">Permission record system name</param>
+        /// <param name="permissionActionName">Permission action name</param>
+        /// <returns>true - authorized; otherwise, false</returns>
+        Task<bool> AuthorizeAction(string permissionRecordSystemName, string permissionActionName);
+
     }
 }

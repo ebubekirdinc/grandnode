@@ -1,4 +1,6 @@
 ﻿using Grand.Core;
+using Grand.Domain;
+using Grand.Domain.Customers;
 using Grand.Framework.Controllers;
 using Grand.Framework.Kendoui;
 using Grand.Framework.Mvc;
@@ -6,19 +8,20 @@ using Grand.Framework.Mvc.Filters;
 using Grand.Framework.Security.Authorization;
 using Grand.Services.Catalog;
 using Grand.Services.Discounts;
+using Grand.Services.Helpers;
 using Grand.Services.Localization;
 using Grand.Services.Security;
 using Grand.Services.Stores;
 using Grand.Services.Vendors;
 using Grand.Web.Areas.Admin.Extensions;
-using Grand.Web.Areas.Admin.Models.Discounts;
 using Grand.Web.Areas.Admin.Interfaces;
+using Grand.Web.Areas.Admin.Models.Catalog;
+using Grand.Web.Areas.Admin.Models.Discounts;
 using Microsoft.AspNetCore.Mvc;
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using System.Collections.Generic;
-using Grand.Web.Areas.Admin.Models.Catalog;
 
 namespace Grand.Web.Areas.Admin.Controllers
 {
@@ -26,21 +29,31 @@ namespace Grand.Web.Areas.Admin.Controllers
     public partial class DiscountController : BaseAdminController
     {
         #region Fields
+        
         private readonly IDiscountViewModelService _discountViewModelService;
         private readonly IDiscountService _discountService;
         private readonly ILocalizationService _localizationService;
+        private readonly IWorkContext _workContext;
+        private readonly IStoreService _storeService;
+        private readonly IDateTimeHelper _dateTimeHelper;
         #endregion
 
         #region Constructors
 
         public DiscountController(
             IDiscountViewModelService discountViewModelService,
-            IDiscountService discountService, 
-            ILocalizationService localizationService)
+            IDiscountService discountService,
+            ILocalizationService localizationService,
+            IWorkContext workContext,
+            IStoreService storeService,
+            IDateTimeHelper dateTimeHelper)
         {
-            this._discountViewModelService = discountViewModelService;
-            this._discountService = discountService;
-            this._localizationService = localizationService;
+            _discountViewModelService = discountViewModelService;
+            _discountService = discountService;
+            _localizationService = localizationService;
+            _workContext = workContext;
+            _storeService = storeService;
+            _dateTimeHelper = dateTimeHelper;
         }
 
         #endregion
@@ -60,19 +73,22 @@ namespace Grand.Web.Areas.Admin.Controllers
         public async Task<IActionResult> List(DiscountListModel model, DataSourceRequest command)
         {
             var (discountModel, totalCount) = await _discountViewModelService.PrepareDiscountModel(model, command.Page, command.PageSize);
-            var gridModel = new DataSourceResult
-            {
+            var gridModel = new DataSourceResult {
                 Data = discountModel.ToList(),
                 Total = totalCount
             };
             return Json(gridModel);
         }
-        
+
         //create
         public async Task<IActionResult> Create()
         {
             var model = new DiscountModel();
             await _discountViewModelService.PrepareDiscountModel(model, null);
+
+            //Stores
+            await model.PrepareStoresMappingModel(null, _storeService, false, _workContext.CurrentCustomer.StaffStoreId);
+
             //default values
             model.LimitationTimes = 1;
             return View(model);
@@ -83,12 +99,22 @@ namespace Grand.Web.Areas.Admin.Controllers
         {
             if (ModelState.IsValid)
             {
+                if (_workContext.CurrentCustomer.IsStaff())
+                {
+                    model.LimitedToStores = true;
+                    model.SelectedStoreIds = new string[] { _workContext.CurrentCustomer.StaffStoreId };
+                }
+
                 var discount = await _discountViewModelService.InsertDiscountModel(model);
                 SuccessNotification(_localizationService.GetResource("Admin.Promotions.Discounts.Added"));
                 return continueEditing ? RedirectToAction("Edit", new { id = discount.Id }) : RedirectToAction("List");
             }
             //If we got this far, something failed, redisplay form
             await _discountViewModelService.PrepareDiscountModel(model, null);
+
+            //Stores
+            await model.PrepareStoresMappingModel(null, _storeService, true, _workContext.CurrentCustomer.StaffStoreId);
+
             return View(model);
         }
 
@@ -100,8 +126,23 @@ namespace Grand.Web.Areas.Admin.Controllers
                 //No discount found with the specified id
                 return RedirectToAction("List");
 
-            var model = discount.ToModel();
+            if (_workContext.CurrentCustomer.IsStaff())
+            {
+                if (!discount.LimitedToStores || (discount.LimitedToStores && discount.Stores.Contains(_workContext.CurrentCustomer.StaffStoreId) && discount.Stores.Count > 1))
+                    WarningNotification(_localizationService.GetResource("Admin.Promotions.Discounts.Permisions"));
+                else
+                {
+                    if (!discount.AccessToEntityByStore(_workContext.CurrentCustomer.StaffStoreId))
+                        return RedirectToAction("List");
+                }
+            }
+
+            var model = discount.ToModel(_dateTimeHelper);
             await _discountViewModelService.PrepareDiscountModel(model, discount);
+
+            //Stores
+            await model.PrepareStoresMappingModel(discount, _storeService, false, _workContext.CurrentCustomer.StaffStoreId);
+
             return View(model);
         }
 
@@ -113,20 +154,35 @@ namespace Grand.Web.Areas.Admin.Controllers
                 //No discount found with the specified id
                 return RedirectToAction("List");
 
+            if (_workContext.CurrentCustomer.IsStaff())
+            {
+                if (!discount.AccessToEntityByStore(_workContext.CurrentCustomer.StaffStoreId))
+                    return RedirectToAction("Edit", new { id = discount.Id });
+            }
+
             if (ModelState.IsValid)
             {
+                if (_workContext.CurrentCustomer.IsStaff())
+                {
+                    model.LimitedToStores = true;
+                    model.SelectedStoreIds = new string[] { _workContext.CurrentCustomer.StaffStoreId };
+                }
                 discount = await _discountViewModelService.UpdateDiscountModel(discount, model);
                 SuccessNotification(_localizationService.GetResource("Admin.Promotions.Discounts.Updated"));
                 if (continueEditing)
                 {
                     //selected tab
-                    SaveSelectedTabIndex();
-                    return RedirectToAction("Edit",  new {id = discount.Id});
+                    await SaveSelectedTabIndex();
+                    return RedirectToAction("Edit", new { id = discount.Id });
                 }
                 return RedirectToAction("List");
             }
             //If we got this far, something failed, redisplay form
             await _discountViewModelService.PrepareDiscountModel(model, discount);
+
+            //Stores
+            await model.PrepareStoresMappingModel(discount, _storeService, true, _workContext.CurrentCustomer.StaffStoreId);
+
             return View(model);
         }
 
@@ -138,6 +194,12 @@ namespace Grand.Web.Areas.Admin.Controllers
             if (discount == null)
                 //No discount found with the specified id
                 return RedirectToAction("List");
+
+            if (_workContext.CurrentCustomer.IsStaff())
+            {
+                if (!discount.AccessToEntityByStore(_workContext.CurrentCustomer.StaffStoreId))
+                    return RedirectToAction("Edit", new { id = discount.Id });
+            }
 
             var usagehistory = await _discountService.GetAllDiscountUsageHistory(discount.Id);
             if (usagehistory.Count > 0)
@@ -166,9 +228,8 @@ namespace Grand.Web.Areas.Admin.Controllers
                 throw new Exception("No discount found with the specified id");
 
             var couponcodes = await _discountService.GetAllCouponCodesByDiscountId(discount.Id, pageIndex: command.Page - 1, pageSize: command.PageSize);
-            var gridModel = new DataSourceResult
-            {
-                Data = couponcodes.Select(x => new 
+            var gridModel = new DataSourceResult {
+                Data = couponcodes.Select(x => new
                 {
                     Id = x.Id,
                     CouponCode = x.CouponCode,
@@ -202,7 +263,7 @@ namespace Grand.Web.Areas.Admin.Controllers
         }
         public async Task<IActionResult> CouponCodeInsert(string discountId, string couponCode)
         {
-            if(string.IsNullOrEmpty(couponCode))
+            if (string.IsNullOrEmpty(couponCode))
                 throw new Exception("Coupon code can't be empty");
 
             var discount = await _discountService.GetDiscountById(discountId);
@@ -211,7 +272,7 @@ namespace Grand.Web.Areas.Admin.Controllers
 
             couponCode = couponCode.ToUpper();
 
-            if ((await _discountService.GetDiscountByCouponCode(couponCode))!=null)
+            if ((await _discountService.GetDiscountByCouponCode(couponCode)) != null)
                 return new JsonResult(new DataSourceResult() { Errors = "Coupon code exists" });
             if (ModelState.IsValid)
             {
@@ -288,6 +349,7 @@ namespace Grand.Web.Areas.Admin.Controllers
 
         #region Applied to products
 
+        [PermissionAuthorizeAction(PermissionActionName.List)]
         [HttpPost]
         public async Task<IActionResult> ProductList(DataSourceRequest command, string discountId, [FromServices] IProductService productService)
         {
@@ -296,10 +358,8 @@ namespace Grand.Web.Areas.Admin.Controllers
                 throw new Exception("No discount found with the specified id");
 
             var products = await productService.GetProductsByDiscount(discount.Id, pageIndex: command.Page - 1, pageSize: command.PageSize);
-            var gridModel = new DataSourceResult
-            {
-                Data = products.Select(x => new DiscountModel.AppliedToProductModel
-                {
+            var gridModel = new DataSourceResult {
+                Data = products.Select(x => new DiscountModel.AppliedToProductModel {
                     ProductId = x.Id,
                     ProductName = x.Name
                 }),
@@ -309,6 +369,7 @@ namespace Grand.Web.Areas.Admin.Controllers
             return Json(gridModel);
         }
 
+        [PermissionAuthorizeAction(PermissionActionName.Delete)]
         public async Task<IActionResult> ProductDelete(string discountId, string productId, [FromServices] IProductService productService)
         {
             var discount = await _discountService.GetDiscountById(discountId);
@@ -327,19 +388,20 @@ namespace Grand.Web.Areas.Admin.Controllers
             return ErrorForKendoGridJson(ModelState);
         }
 
+        [PermissionAuthorizeAction(PermissionActionName.Edit)]
         public async Task<IActionResult> ProductAddPopup(string discountId)
         {
             var model = await _discountViewModelService.PrepareProductToDiscountModel();
             return View(model);
         }
 
+        [PermissionAuthorizeAction(PermissionActionName.Edit)]
         [HttpPost]
         public async Task<IActionResult> ProductAddPopupList(DataSourceRequest command, DiscountModel.AddProductToDiscountModel model)
         {
             var products = await _discountViewModelService.PrepareProductModel(model, command.Page, command.PageSize);
 
-            var gridModel = new DataSourceResult
-            {
+            var gridModel = new DataSourceResult {
                 Data = products.products.ToList(),
                 Total = products.totalCount
             };
@@ -347,6 +409,7 @@ namespace Grand.Web.Areas.Admin.Controllers
             return Json(gridModel);
         }
 
+        [PermissionAuthorizeAction(PermissionActionName.Edit)]
         [HttpPost]
         [FormValueRequired("save")]
         public async Task<IActionResult> ProductAddPopup(DiscountModel.AddProductToDiscountModel model)
@@ -368,6 +431,7 @@ namespace Grand.Web.Areas.Admin.Controllers
 
         #region Applied to categories
 
+        [PermissionAuthorizeAction(PermissionActionName.List)]
         [HttpPost]
         public async Task<IActionResult> CategoryList(DataSourceRequest command, string discountId, [FromServices] ICategoryService categoryService)
         {
@@ -379,14 +443,12 @@ namespace Grand.Web.Areas.Admin.Controllers
             var items = new List<DiscountModel.AppliedToCategoryModel>();
             foreach (var item in categories)
             {
-                items.Add(new DiscountModel.AppliedToCategoryModel
-                {
+                items.Add(new DiscountModel.AppliedToCategoryModel {
                     CategoryId = item.Id,
-                    CategoryName = await item.GetFormattedBreadCrumb(categoryService)
+                    CategoryName = await categoryService.GetFormattedBreadCrumb(item)
                 });
             }
-            var gridModel = new DataSourceResult
-            {
+            var gridModel = new DataSourceResult {
                 Data = items,
                 Total = categories.Count
             };
@@ -394,6 +456,7 @@ namespace Grand.Web.Areas.Admin.Controllers
             return Json(gridModel);
         }
 
+        [PermissionAuthorizeAction(PermissionActionName.Delete)]
         public async Task<IActionResult> CategoryDelete(string discountId, string categoryId, [FromServices] ICategoryService categoryService)
         {
             var discount = await _discountService.GetDiscountById(discountId);
@@ -412,12 +475,14 @@ namespace Grand.Web.Areas.Admin.Controllers
             return ErrorForKendoGridJson(ModelState);
         }
 
+        [PermissionAuthorizeAction(PermissionActionName.Edit)]
         public IActionResult CategoryAddPopup(string discountId)
         {
             var model = new DiscountModel.AddCategoryToDiscountModel();
             return View(model);
         }
 
+        [PermissionAuthorizeAction(PermissionActionName.Edit)]
         [HttpPost]
         public async Task<IActionResult> CategoryAddPopupList(DataSourceRequest command, DiscountModel.AddCategoryToDiscountModel model, [FromServices] ICategoryService categoryService)
         {
@@ -427,11 +492,10 @@ namespace Grand.Web.Areas.Admin.Controllers
             foreach (var item in categories)
             {
                 var categoryModel = item.ToModel();
-                categoryModel.Breadcrumb = await item.GetFormattedBreadCrumb(categoryService);
+                categoryModel.Breadcrumb = await categoryService.GetFormattedBreadCrumb(item);
                 items.Add(categoryModel);
             }
-            var gridModel = new DataSourceResult
-            {
+            var gridModel = new DataSourceResult {
                 Data = items,
                 Total = categories.TotalCount
             };
@@ -439,6 +503,7 @@ namespace Grand.Web.Areas.Admin.Controllers
             return Json(gridModel);
         }
 
+        [PermissionAuthorizeAction(PermissionActionName.Edit)]
         [HttpPost]
         [FormValueRequired("save")]
         public async Task<IActionResult> CategoryAddPopup(DiscountModel.AddCategoryToDiscountModel model)
@@ -459,6 +524,7 @@ namespace Grand.Web.Areas.Admin.Controllers
 
         #region Applied to manufacturers
 
+        [PermissionAuthorizeAction(PermissionActionName.List)]
         [HttpPost]
         public async Task<IActionResult> ManufacturerList(DataSourceRequest command, string discountId, [FromServices] IManufacturerService manufacturerService)
         {
@@ -467,10 +533,8 @@ namespace Grand.Web.Areas.Admin.Controllers
                 throw new Exception("No discount found with the specified id");
 
             var manufacturers = await manufacturerService.GetAllManufacturersByDiscount(discount.Id);
-            var gridModel = new DataSourceResult
-            {
-                Data = manufacturers.Select(x => new DiscountModel.AppliedToManufacturerModel
-                {
+            var gridModel = new DataSourceResult {
+                Data = manufacturers.Select(x => new DiscountModel.AppliedToManufacturerModel {
                     ManufacturerId = x.Id,
                     ManufacturerName = x.Name
                 }),
@@ -480,6 +544,7 @@ namespace Grand.Web.Areas.Admin.Controllers
             return Json(gridModel);
         }
 
+        [PermissionAuthorizeAction(PermissionActionName.Delete)]
         public async Task<IActionResult> ManufacturerDelete(string discountId, string manufacturerId, [FromServices] IManufacturerService manufacturerService)
         {
             var discount = await _discountService.GetDiscountById(discountId);
@@ -498,19 +563,20 @@ namespace Grand.Web.Areas.Admin.Controllers
             return ErrorForKendoGridJson(ModelState);
         }
 
+        [PermissionAuthorizeAction(PermissionActionName.Edit)]
         public IActionResult ManufacturerAddPopup(string discountId)
         {
             var model = new DiscountModel.AddManufacturerToDiscountModel();
             return View(model);
         }
 
+        [PermissionAuthorizeAction(PermissionActionName.Edit)]
         [HttpPost]
         public async Task<IActionResult> ManufacturerAddPopupList(DataSourceRequest command, DiscountModel.AddManufacturerToDiscountModel model, [FromServices] IManufacturerService manufacturerService)
         {
-            var manufacturers = await manufacturerService.GetAllManufacturers(model.SearchManufacturerName,"",
+            var manufacturers = await manufacturerService.GetAllManufacturers(model.SearchManufacturerName, "",
                 command.Page - 1, command.PageSize, true);
-            var gridModel = new DataSourceResult
-            {
+            var gridModel = new DataSourceResult {
                 Data = manufacturers.Select(x => x.ToModel()),
                 Total = manufacturers.TotalCount
             };
@@ -518,6 +584,7 @@ namespace Grand.Web.Areas.Admin.Controllers
             return Json(gridModel);
         }
 
+        [PermissionAuthorizeAction(PermissionActionName.Edit)]
         [HttpPost]
         [FormValueRequired("save")]
         public async Task<IActionResult> ManufacturerAddPopup(DiscountModel.AddManufacturerToDiscountModel model)
@@ -538,6 +605,7 @@ namespace Grand.Web.Areas.Admin.Controllers
 
         #region Applied to vendors
 
+        [PermissionAuthorizeAction(PermissionActionName.List)]
         [HttpPost]
         public async Task<IActionResult> VendorList(DataSourceRequest command, string discountId, [FromServices] IVendorService vendorService)
         {
@@ -546,10 +614,8 @@ namespace Grand.Web.Areas.Admin.Controllers
                 throw new Exception("No discount found with the specified id");
 
             var vendors = await vendorService.GetAllVendorsByDiscount(discount.Id);
-            var gridModel = new DataSourceResult
-            {
-                Data = vendors.Select(x => new DiscountModel.AppliedToVendorModel
-                {
+            var gridModel = new DataSourceResult {
+                Data = vendors.Select(x => new DiscountModel.AppliedToVendorModel {
                     VendorId = x.Id,
                     VendorName = x.Name
                 }),
@@ -559,6 +625,7 @@ namespace Grand.Web.Areas.Admin.Controllers
             return Json(gridModel);
         }
 
+        [PermissionAuthorizeAction(PermissionActionName.Delete)]
         public async Task<IActionResult> VendorDelete(string discountId, string vendorId, [FromServices] IVendorService vendorService)
         {
             var discount = await _discountService.GetDiscountById(discountId);
@@ -576,12 +643,14 @@ namespace Grand.Web.Areas.Admin.Controllers
             return ErrorForKendoGridJson(ModelState);
         }
 
+        [PermissionAuthorizeAction(PermissionActionName.Edit)]
         public IActionResult VendorAddPopup(string discountId)
         {
             var model = new DiscountModel.AddVendorToDiscountModel();
             return View(model);
         }
 
+        [PermissionAuthorizeAction(PermissionActionName.Edit)]
         [HttpPost]
         public async Task<IActionResult> VendorAddPopupList(DataSourceRequest command, DiscountModel.AddVendorToDiscountModel model, [FromServices] IVendorService vendorService)
         {
@@ -591,11 +660,10 @@ namespace Grand.Web.Areas.Admin.Controllers
             if (!(string.IsNullOrEmpty(model.SearchVendorEmail)))
             {
                 var tempVendors = vendors.Where(x => x.Email.ToLowerInvariant().Contains(model.SearchVendorEmail.Trim()));
-                vendors = new PagedList<Core.Domain.Vendors.Vendor>(tempVendors, command.Page - 1, command.PageSize);
+                vendors = new PagedList<Domain.Vendors.Vendor>(tempVendors, command.Page - 1, command.PageSize);
             }
 
-            var gridModel = new DataSourceResult
-            {
+            var gridModel = new DataSourceResult {
                 Data = vendors.Select(x => x.ToModel()),
                 Total = vendors.TotalCount
             };
@@ -603,6 +671,7 @@ namespace Grand.Web.Areas.Admin.Controllers
             return Json(gridModel);
         }
 
+        [PermissionAuthorizeAction(PermissionActionName.Edit)]
         [HttpPost]
         [FormValueRequired("save")]
         public async Task<IActionResult> VendorAddPopup(DiscountModel.AddVendorToDiscountModel model)
@@ -621,84 +690,9 @@ namespace Grand.Web.Areas.Admin.Controllers
 
         #endregion
 
-        #region Applied to store
-        [HttpPost]
-        public async Task<IActionResult> StoreList(DataSourceRequest command, string discountId, [FromServices] IStoreService storeService)
-        {
-            var discount = await _discountService.GetDiscountById(discountId);
-            if (discount == null)
-                throw new Exception("No discount found with the specified id");
-
-            var stores = await storeService.GetAllStoresByDiscount(discount.Id);
-            var gridModel = new DataSourceResult
-            {
-                Data = stores.Select(x => new DiscountModel.AppliedToStoreModel
-                {
-                    StoreId = x.Id,
-                    StoreName = x.Name
-                }),
-                Total = stores.Count
-            };
-
-            return Json(gridModel);
-        }
-
-        public async Task<IActionResult> StoreDelete(string discountId, string storeId, [FromServices] IStoreService storeService)
-        {
-            var discount = await _discountService.GetDiscountById(discountId);
-            if (discount == null)
-                throw new Exception("No discount found with the specified id");
-            var store = await storeService.GetStoreById(storeId);
-            if (store == null)
-                throw new Exception("No store found with the specified id");
-
-            if (ModelState.IsValid)
-            {
-                await _discountViewModelService.DeleteStore(discount, store);
-                return new NullJsonResult();
-            }
-            return ErrorForKendoGridJson(ModelState);
-        }
-
-        public IActionResult StoreAddPopup(string discountId)
-        {
-            var model = new DiscountModel.AddStoreToDiscountModel();
-            return View(model);
-        }
-
-        [HttpPost]
-        public async Task<IActionResult> StoreAddPopupList(DataSourceRequest command, DiscountModel.AddStoreToDiscountModel model, [FromServices] IStoreService storeService)
-        {
-            var stores = await storeService.GetAllStores();
-            var gridModel = new DataSourceResult
-            {
-                Data = stores.Select(x => x.ToModel()),
-                Total = stores.Count
-            };
-
-            return Json(gridModel);
-        }
-
-        [HttpPost]
-        [FormValueRequired("save")]
-        public async Task<IActionResult> StoreAddPopup(DiscountModel.AddStoreToDiscountModel model)
-        {
-            var discount = await _discountService.GetDiscountById(model.DiscountId);
-            if (discount == null)
-                throw new Exception("No discount found with the specified id");
-
-            if (model.SelectedStoreIds != null)
-            {
-                await _discountViewModelService.InsertStoreToDiscountModel(model);
-            }
-            ViewBag.RefreshPage = true;
-            return View(model);
-        }
-
-        #endregion
-
         #region Discount usage history
 
+        [PermissionAuthorizeAction(PermissionActionName.List)]
         [HttpPost]
         public async Task<IActionResult> UsageHistoryList(string discountId, DataSourceRequest command)
         {
@@ -707,21 +701,21 @@ namespace Grand.Web.Areas.Admin.Controllers
                 throw new ArgumentException("No discount found with the specified id");
 
             var (usageHistoryModels, totalCount) = await _discountViewModelService.PrepareDiscountUsageHistoryModel(discount, command.Page, command.PageSize);
-            var gridModel = new DataSourceResult
-            {
+            var gridModel = new DataSourceResult {
                 Data = usageHistoryModels.ToList(),
                 Total = totalCount
             };
             return Json(gridModel);
         }
 
+        [PermissionAuthorizeAction(PermissionActionName.Delete)]
         [HttpPost]
         public async Task<IActionResult> UsageHistoryDelete(string discountId, string id)
         {
             var discount = await _discountService.GetDiscountById(discountId);
             if (discount == null)
                 throw new ArgumentException("No discount found with the specified id");
-            
+
             var duh = await _discountService.GetDiscountUsageHistoryById(id);
             if (duh != null)
             {

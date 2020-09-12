@@ -2,10 +2,11 @@
 @using Grand.Core;
 @using Grand.Framework.UI;
 @inject Grand.Services.Media.IPictureService pictureService
+@inject IPageHeadBuilder pagebuilder
 @{
     //register CSS and JS
-    Html.AddCssFileParts("~/scripts/fineuploader/fineuploader-4.2.2.min.css", excludeFromBundle:true);
-    Html.AddScriptParts("~/scripts/fineuploader/jquery.fineuploader-4.2.2.min.js", excludeFromBundle: true);
+    pagebuilder.AddCssFileParts(ResourceLocation.Head, "~/scripts/fineuploader/fineuploader-4.2.2.min.css", excludeFromBundle: true);
+    pagebuilder.AddScriptParts(ResourceLocation.Head, "~/scripts/fineuploader/jquery.fineuploader-4.2.2.min.js", excludeFromBundle: true);
 
     //other variables
     var random = CommonHelper.GenerateRandomInteger();
@@ -69,7 +70,7 @@ else
     </div>
 </script>
 
-<script type="text/javascript">
+<script>
     $(document).ready(function() {
 
         $("#@(clientId)").fineUploader({
@@ -88,7 +89,7 @@ else
 
         $("#@(clientId + "remove")").click(function(e) {
             $("#@(clientId + "image")").html("<img src='@await pictureService.GetDefaultPictureUrl(targetPictureSize)'/>");
-            $("#@(clientId + "value") input").val(0);
+            $("#@(clientId + "value") input").val('');
             $(".qq-upload-list").empty();
             $(this).hide();
         });

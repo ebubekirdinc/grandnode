@@ -12,6 +12,7 @@ namespace Grand.Web.Controllers
         #region Fields
 
         private readonly IUpgradeService _upgradeService;
+
         #endregion
 
         #region Ctor
@@ -28,9 +29,13 @@ namespace Grand.Web.Controllers
                 return RedirectToRoute("Install");
 
             var model = new UpgradeModel {
-                ApplicationVersion = GrandVersion.CurrentVersion,
+                ApplicationVersion = GrandVersion.FullVersion,
+                ApplicationDBVersion = GrandVersion.SupportedDBVersion,
                 DatabaseVersion = _upgradeService.DatabaseVersion()
             };
+
+            if (model.ApplicationDBVersion == model.DatabaseVersion)
+                return RedirectToRoute("Homepage");
 
             return View(model);
         }
@@ -39,14 +44,16 @@ namespace Grand.Web.Controllers
         public virtual async Task<IActionResult> Index(UpgradeModel m, [FromServices] IWebHelper webHelper)
         {
             var model = new UpgradeModel {
-                ApplicationVersion = GrandVersion.CurrentVersion,
+                ApplicationDBVersion = GrandVersion.SupportedDBVersion,
                 DatabaseVersion = _upgradeService.DatabaseVersion()
             };
 
-            if (model.ApplicationVersion != model.DatabaseVersion)
+            if (model.ApplicationDBVersion != model.DatabaseVersion)
             {
-                await _upgradeService.UpgradeData(model.DatabaseVersion, model.ApplicationVersion);
+                await _upgradeService.UpgradeData(model.DatabaseVersion, model.ApplicationDBVersion);
             }
+            else
+                return RedirectToRoute("HomePage");
 
             //restart application
             webHelper.RestartAppDomain();

@@ -1,5 +1,5 @@
 ﻿using Grand.Core;
-using Grand.Core.Domain.Customers;
+using Grand.Domain.Customers;
 using Grand.Framework.Kendoui;
 using Grand.Framework.Mvc.Filters;
 using Grand.Framework.Security.Authorization;
@@ -21,6 +21,7 @@ namespace Grand.Web.Areas.Admin.Controllers
         #region Fields
 
         private readonly IProductReviewViewModelService _productReviewViewModelService;
+        private readonly IProductReviewService _productReviewService;
         private readonly ILocalizationService _localizationService;
         private readonly IWorkContext _workContext;
 
@@ -29,11 +30,13 @@ namespace Grand.Web.Areas.Admin.Controllers
         #region Constructors
 
         public ProductReviewController(
-            IProductReviewViewModelService productReviewViewModelService,
+            IProductReviewViewModelService productReviewViewModelService, 
+            IProductReviewService productReviewService,
             ILocalizationService localizationService,
             IWorkContext workContext)
         {
             _productReviewViewModelService = productReviewViewModelService;
+            _productReviewService = productReviewService;
             _localizationService = localizationService;
             _workContext = workContext;
         }
@@ -51,6 +54,7 @@ namespace Grand.Web.Areas.Admin.Controllers
             return View(model);
         }
 
+        [PermissionAuthorizeAction(PermissionActionName.List)]
         [HttpPost]
         public async Task<IActionResult> List(DataSourceRequest command, ProductReviewListModel model)
         {
@@ -68,9 +72,10 @@ namespace Grand.Web.Areas.Admin.Controllers
         }
 
         //edit
-        public async Task<IActionResult> Edit(string id, [FromServices] IProductService productService)
+        [PermissionAuthorizeAction(PermissionActionName.Preview)]
+        public async Task<IActionResult> Edit(string id)
         {
-            var productReview = await productService.GetProductReviewById(id);
+            var productReview = await _productReviewService.GetProductReviewById(id);
 
             if (productReview == null)
                 //No product review found with the specified id
@@ -86,10 +91,11 @@ namespace Grand.Web.Areas.Admin.Controllers
             return View(model);
         }
 
+        [PermissionAuthorizeAction(PermissionActionName.Edit)]
         [HttpPost, ParameterBasedOnFormName("save-continue", "continueEditing")]
-        public async Task<IActionResult> Edit(ProductReviewModel model, bool continueEditing, [FromServices] IProductService productService)
+        public async Task<IActionResult> Edit(ProductReviewModel model, bool continueEditing)
         {
-            var productReview = await productService.GetProductReviewById(model.Id);
+            var productReview = await _productReviewService.GetProductReviewById(model.Id);
             if (productReview == null)
                 //No product review found with the specified id
                 return RedirectToAction("List");
@@ -112,10 +118,11 @@ namespace Grand.Web.Areas.Admin.Controllers
         }
 
         //delete
+        [PermissionAuthorizeAction(PermissionActionName.Delete)]
         [HttpPost]
-        public async Task<IActionResult> Delete(string id, [FromServices] IProductService productService)
+        public async Task<IActionResult> Delete(string id)
         {
-            var productReview = await productService.GetProductReviewById(id);
+            var productReview = await _productReviewService.GetProductReviewById(id);
             if (productReview == null)
                 //No product review found with the specified id
                 return RedirectToAction("List");
@@ -135,6 +142,7 @@ namespace Grand.Web.Areas.Admin.Controllers
             return RedirectToAction("Edit", new { id = productReview.Id });
         }
 
+        [PermissionAuthorizeAction(PermissionActionName.Edit)]
         [HttpPost]
         public async Task<IActionResult> ApproveSelected(ICollection<string> selectedIds)
         {
@@ -146,6 +154,7 @@ namespace Grand.Web.Areas.Admin.Controllers
             return Json(new { Result = true });
         }
 
+        [PermissionAuthorizeAction(PermissionActionName.Edit)]
         [HttpPost]
         public async Task<IActionResult> DisapproveSelected(ICollection<string> selectedIds)
         {
@@ -157,7 +166,7 @@ namespace Grand.Web.Areas.Admin.Controllers
             return Json(new { Result = true });
         }
 
-
+        
         public async Task<IActionResult> ProductSearchAutoComplete(string term, [FromServices] IProductService productService)
         {
             const int searchTermMinimumLength = 3;

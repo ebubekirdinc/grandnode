@@ -1,5 +1,5 @@
 ﻿using Grand.Core;
-using Grand.Core.Domain.Catalog;
+using Grand.Domain.Catalog;
 using Grand.Framework.Controllers;
 using Grand.Framework.Kendoui;
 using Grand.Framework.Mvc;
@@ -22,7 +22,7 @@ using System;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using Grand.Core.Domain.Customers;
+using Grand.Domain.Customers;
 
 namespace Grand.Web.Areas.Admin.Controllers
 {
@@ -33,6 +33,7 @@ namespace Grand.Web.Areas.Admin.Controllers
         private readonly IManufacturerViewModelService _manufacturerViewModelService;
         private readonly IManufacturerService _manufacturerService;
         private readonly IWorkContext _workContext;
+        private readonly IStoreContext _storeContext;
         private readonly ICustomerService _customerService;
         private readonly IStoreService _storeService;
         private readonly ILanguageService _languageService;
@@ -47,6 +48,7 @@ namespace Grand.Web.Areas.Admin.Controllers
             IManufacturerViewModelService manufacturerViewModelService,
             IManufacturerService manufacturerService,
             IWorkContext workContext,
+            IStoreContext storeContext,
             ICustomerService customerService,
             IStoreService storeService,
             ILanguageService languageService,
@@ -57,6 +59,7 @@ namespace Grand.Web.Areas.Admin.Controllers
             _manufacturerViewModelService = manufacturerViewModelService;
             _manufacturerService = manufacturerService;
             _workContext = workContext;
+            _storeContext = storeContext;
             _customerService = customerService;
             _storeService = storeService;
             _languageService = languageService;
@@ -95,11 +98,12 @@ namespace Grand.Web.Areas.Admin.Controllers
             var model = new ManufacturerListModel();
             model.AvailableStores.Add(new SelectListItem { Text = _localizationService.GetResource("Admin.Common.All"), Value = "" });
             foreach (var s in (await _storeService.GetAllStores()).Where(x => x.Id == storeId || string.IsNullOrWhiteSpace(storeId)))
-                model.AvailableStores.Add(new SelectListItem { Text = s.Name, Value = s.Id.ToString() });
+                model.AvailableStores.Add(new SelectListItem { Text = s.Shortcut, Value = s.Id.ToString() });
 
             return View(model);
         }
 
+        [PermissionAuthorizeAction(PermissionActionName.List)]
         [HttpPost]
         public async Task<IActionResult> List(DataSourceRequest command, ManufacturerListModel model)
         {
@@ -122,6 +126,7 @@ namespace Grand.Web.Areas.Admin.Controllers
 
         #region Create / Edit / Delete
 
+        [PermissionAuthorizeAction(PermissionActionName.Create)]
         public async Task<IActionResult> Create([FromServices] CatalogSettings catalogSettings)
         {
             var model = new ManufacturerModel();
@@ -140,10 +145,13 @@ namespace Grand.Web.Areas.Admin.Controllers
             model.PageSizeOptions = catalogSettings.DefaultManufacturerPageSizeOptions;
             model.Published = true;
             model.AllowCustomersToSelectPageSize = true;
+            //sort options
+            _manufacturerViewModelService.PrepareSortOptionsModel(model);
 
             return View(model);
         }
 
+        [PermissionAuthorizeAction(PermissionActionName.Edit)]
         [HttpPost, ParameterBasedOnFormName("save-continue", "continueEditing")]
         public async Task<IActionResult> Create(ManufacturerModel model, bool continueEditing)
         {
@@ -169,10 +177,13 @@ namespace Grand.Web.Areas.Admin.Controllers
             await model.PrepareACLModel(null, true, _customerService);
             //Stores
             await model.PrepareStoresMappingModel(null, _storeService, true, _workContext.CurrentCustomer.StaffStoreId);
+            //sort options
+            _manufacturerViewModelService.PrepareSortOptionsModel(model);
 
             return View(model);
         }
 
+        [PermissionAuthorizeAction(PermissionActionName.Preview)]
         public async Task<IActionResult> Edit(string id)
         {
             var manufacturer = await _manufacturerService.GetManufacturerById(id);
@@ -197,6 +208,7 @@ namespace Grand.Web.Areas.Admin.Controllers
             {
                 locale.Name = manufacturer.GetLocalized(x => x.Name, languageId, false, false);
                 locale.Description = manufacturer.GetLocalized(x => x.Description, languageId, false, false);
+                locale.BottomDescription = manufacturer.GetLocalized(x => x.BottomDescription, languageId, false, false);
                 locale.MetaKeywords = manufacturer.GetLocalized(x => x.MetaKeywords, languageId, false, false);
                 locale.MetaDescription = manufacturer.GetLocalized(x => x.MetaDescription, languageId, false, false);
                 locale.MetaTitle = manufacturer.GetLocalized(x => x.MetaTitle, languageId, false, false);
@@ -210,10 +222,13 @@ namespace Grand.Web.Areas.Admin.Controllers
             await model.PrepareACLModel(manufacturer, false, _customerService);
             //Stores
             await model.PrepareStoresMappingModel(manufacturer, _storeService, false, _workContext.CurrentCustomer.StaffStoreId);
+            //sort options
+            _manufacturerViewModelService.PrepareSortOptionsModel(model);
 
             return View(model);
         }
 
+        [PermissionAuthorizeAction(PermissionActionName.Edit)]
         [HttpPost, ParameterBasedOnFormName("save-continue", "continueEditing")]
         public async Task<IActionResult> Edit(ManufacturerModel model, bool continueEditing)
         {
@@ -240,7 +255,7 @@ namespace Grand.Web.Areas.Admin.Controllers
                 if (continueEditing)
                 {
                     //selected tab
-                    SaveSelectedTabIndex();
+                    await SaveSelectedTabIndex();
 
                     return RedirectToAction("Edit", new { id = manufacturer.Id });
                 }
@@ -257,10 +272,13 @@ namespace Grand.Web.Areas.Admin.Controllers
             await model.PrepareACLModel(manufacturer, true, _customerService);
             //Stores
             await model.PrepareStoresMappingModel(manufacturer, _storeService, true, _workContext.CurrentCustomer.StaffStoreId);
+            //sort options
+            _manufacturerViewModelService.PrepareSortOptionsModel(model);
 
             return View(model);
         }
 
+        [PermissionAuthorizeAction(PermissionActionName.Delete)]
         [HttpPost]
         public async Task<IActionResult> Delete(string id)
         {
@@ -290,6 +308,7 @@ namespace Grand.Web.Areas.Admin.Controllers
 
         #region Export / Import
 
+        [PermissionAuthorizeAction(PermissionActionName.Export)]
         public async Task<IActionResult> ExportXml()
         {
             try
@@ -305,7 +324,7 @@ namespace Grand.Web.Areas.Admin.Controllers
             }
         }
 
-
+        [PermissionAuthorizeAction(PermissionActionName.Export)]
         public async Task<IActionResult> ExportXlsx()
         {
             try
@@ -320,6 +339,7 @@ namespace Grand.Web.Areas.Admin.Controllers
             }
         }
 
+        [PermissionAuthorizeAction(PermissionActionName.Import)]
         [HttpPost]
         public async Task<IActionResult> ImportFromXlsx(IFormFile importexcelfile, [FromServices] IWorkContext workContext)
         {
@@ -351,6 +371,7 @@ namespace Grand.Web.Areas.Admin.Controllers
 
         #region Products
 
+        [PermissionAuthorizeAction(PermissionActionName.Preview)]
         [HttpPost]
         public async Task<IActionResult> ProductList(DataSourceRequest command, string manufacturerId)
         {
@@ -359,7 +380,7 @@ namespace Grand.Web.Areas.Admin.Controllers
             if (!permission.allow)
                 return ErrorForKendoGridJson(permission.message);
 
-            var (manufacturerProductModels, totalCount) = await _manufacturerViewModelService.PrepareManufacturerProductModel(manufacturerId, command.Page, command.PageSize);
+            var (manufacturerProductModels, totalCount) = await _manufacturerViewModelService.PrepareManufacturerProductModel(manufacturerId, _storeContext.CurrentStore.Id, command.Page, command.PageSize);
 
             var gridModel = new DataSourceResult
             {
@@ -369,6 +390,7 @@ namespace Grand.Web.Areas.Admin.Controllers
             return Json(gridModel);
         }
 
+        [PermissionAuthorizeAction(PermissionActionName.Edit)]
         [HttpPost]
         public async Task<IActionResult> ProductUpdate(ManufacturerModel.ManufacturerProductModel model)
         {
@@ -380,6 +402,7 @@ namespace Grand.Web.Areas.Admin.Controllers
             return ErrorForKendoGridJson(ModelState);
         }
 
+        [PermissionAuthorizeAction(PermissionActionName.Edit)]
         [HttpPost]
         public async Task<IActionResult> ProductDelete(ManufacturerModel.ManufacturerProductModel model)
         {
@@ -392,6 +415,7 @@ namespace Grand.Web.Areas.Admin.Controllers
             return ErrorForKendoGridJson(ModelState);
         }
 
+        [PermissionAuthorizeAction(PermissionActionName.Edit)]
         public async Task<IActionResult> ProductAddPopup(string manufacturerId)
         {
             var model = await _manufacturerViewModelService.PrepareAddManufacturerProductModel(_workContext.CurrentCustomer.StaffStoreId);
@@ -399,6 +423,7 @@ namespace Grand.Web.Areas.Admin.Controllers
             return View(model);
         }
 
+        [PermissionAuthorizeAction(PermissionActionName.Edit)]
         [HttpPost]
         public async Task<IActionResult> ProductAddPopupList(DataSourceRequest command, ManufacturerModel.AddManufacturerProductModel model)
         {
@@ -416,6 +441,7 @@ namespace Grand.Web.Areas.Admin.Controllers
             return Json(gridModel);
         }
 
+        [PermissionAuthorizeAction(PermissionActionName.Edit)]
         [HttpPost]
         [FormValueRequired("save")]
         public async Task<IActionResult> ProductAddPopup(ManufacturerModel.AddManufacturerProductModel model)
@@ -437,6 +463,7 @@ namespace Grand.Web.Areas.Admin.Controllers
 
         #region Activity log
 
+        [PermissionAuthorizeAction(PermissionActionName.Preview)]
         [HttpPost]
         public async Task<IActionResult> ListActivityLog(DataSourceRequest command, string manufacturerId)
         {

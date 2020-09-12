@@ -1,13 +1,13 @@
 ﻿@model ForumTopicPageModel
-@using Grand.Web.Models.Boards;
-@using Grand.Web.Models.Common;
 @inject Grand.Services.Localization.ILocalizationService localizationService
+@inject IPageHeadBuilder pagebuilder
 @{
     Layout = "_ColumnsOne";
 
-    Html.AddTitleParts(Model.Subject);
+    pagebuilder.AddTitleParts(Model.Subject);
 }
 <div class="page forum-topic-page">
+    @Html.AntiForgeryToken()
     @await Component.InvokeAsync("ForumBreadcrumb", new { forumTopicId = Model.Id })
     <partial name="_ForumHeader" />
     @await Component.InvokeAsync("Widget", new { widgetZone = "boards_topic_after_header", additionalData = Model.Id })

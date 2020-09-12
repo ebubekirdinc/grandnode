@@ -5,7 +5,7 @@
     //page title
     ViewBag.Title = T("Admin.Catalog.Categories.Manage").Text;
 }
-<antiforgery-token />
+
 <div class="row">
     <div class="col-md-12">
         <div class="x_panel light form-fit">
@@ -16,7 +16,7 @@
                     <small>@Html.ActionLink("(" + T("Admin.Catalog.Categories.SwitchToTreeView") + ")", "Tree")</small>
                 </div>
                 <div class="actions btn-group btn-group-devided util-btn-margin-bottom-5">
-                    <a href="@Url.Action("Create")" class="btn green"><i class="fa fa-plus"></i><span class="hidden-xs"> @T("Admin.Common.AddNew") </span></a>
+                    <a href="@Url.Action("Create")" class="btn green"><i class="fa fa-plus"></i><span class="d-none d-sm-inline"> @T("Admin.Common.AddNew") </span></a>
                     <a href="@Url.Action("ExportXml")" class="btn default">
                         <i class="fa fa-file-code-o"></i> @T("Admin.Common.ExportToXml")
                     </a>
@@ -48,7 +48,7 @@
                     </div>
                     <div class="form-actions">
                         <div class="row">
-                            <div class="col-md-offset-3 col-sm-offset-3 col-md-9 col-sm-9">
+                            <div class="offset-md-3 offset-sm-3 col-md-9 col-sm-9">
                                 <button class="btn btn-success filter-submit" id="search-categories">
                                     <i class="fa fa-search"></i> @T("Admin.Common.Search")
                                 </button>
@@ -108,7 +108,7 @@
             {
                 field: "ShowOnHomePage",
                 title: "@T("Admin.Catalog.Categories.Fields.ShowOnHomePage")",
-                width: 100,
+                width: 175,
                 minScreenWidth: 750,
                 headerAttributes: { style: "text-align:center" },
                 attributes: { style: "text-align:center" },
@@ -117,7 +117,7 @@
             {
                 field: "IncludeInTopMenu",
                 title: "@T("Admin.Catalog.Categories.Fields.IncludeInTopMenu")",
-                width: 100,
+                width: 175,
                 minScreenWidth: 750,
                 headerAttributes: { style: "text-align:center" },
                 attributes: { style: "text-align:center" },
@@ -136,13 +136,13 @@
                 headerAttributes: { style: "text-align:center" },
                 attributes: { style: "text-align:center" },
                 title: "@T("Admin.Catalog.Categories.Fields.DisplayOrder")",
-                width: 100,    
+                width: 125,    
                 minScreenWidth: 750,
             }]
         });
     });
 </script>
-<script type="text/javascript">
+<script>
     $(document).ready(function () {
         //search button
         $('#search-categories').click(function () {
@@ -172,8 +172,8 @@
 </script>
 @*import categories form*@
 <div class="modal-dialog" id="importexcel-window" style="display:none; padding: 0 10px;">
-    <form asp-controller="Category" asp-action="ImportFromXlsx" method="post" enctype="multipart/form-data">
-        <antiforgery-token />
+    <form asp-area="Admin" asp-controller="Category" asp-action="ImportFromXlsx" method="post" enctype="multipart/form-data">
+        
         <em>@T("Admin.Catalog.Category.List.ImportFromExcelTip")</em>
         <div class="form-group">
             &nbsp;
@@ -201,7 +201,7 @@
         </div>
     </form>
 </div>
-<script type="text/javascript">
+<script>
         $(document).ready(function () {
             $("#importexcel").click(function (e) {
                 e.preventDefault();

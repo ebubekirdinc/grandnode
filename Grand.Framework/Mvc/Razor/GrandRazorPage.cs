@@ -1,8 +1,7 @@
 ﻿using Grand.Core;
-using Grand.Core.Infrastructure;
 using Grand.Framework.Localization;
-using Grand.Framework.Themes;
 using Grand.Services.Localization;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Grand.Framework.Mvc.Razor
 {
@@ -16,12 +15,10 @@ namespace Grand.Framework.Mvc.Razor
         private Localizer _localizer;
         private IWorkContext _workContext;
 
-        public IWorkContext WorkContext
-        {
-            get
-            {
+        public IWorkContext WorkContext {
+            get {
                 if (_workContext == null)
-                    _workContext = EngineContext.Current.Resolve<IWorkContext>();
+                    _workContext = ViewContext.HttpContext.RequestServices.GetRequiredService<IWorkContext>();
                 return _workContext;
             }
         }
@@ -29,12 +26,10 @@ namespace Grand.Framework.Mvc.Razor
         /// <summary>
         /// Get a localized resources
         /// </summary>
-        public Localizer T
-        {
-            get
-            {
+        public Localizer T {
+            get {
                 if (_localizationService == null)
-                    _localizationService = EngineContext.Current.Resolve<ILocalizationService>();
+                    _localizationService = ViewContext.HttpContext.RequestServices.GetRequiredService<ILocalizationService>();
 
                 if (_localizer == null)
                 {
@@ -79,27 +74,5 @@ namespace Grand.Framework.Mvc.Razor
 
             return index;
         }
-
-        /// <summary>
-        /// Return a value indicating whether the working language and theme support RTL (right-to-left)
-        /// </summary>
-        /// <returns></returns>
-        public bool ShouldUseRtlTheme()
-        {
-            var supportRtl = WorkContext.WorkingLanguage.Rtl;
-            if (supportRtl)
-            {
-                //ensure that the active theme also supports it
-                var themeProvider = EngineContext.Current.Resolve<IThemeProvider>();
-                var themeContext = EngineContext.Current.Resolve<IThemeContext>();
-                supportRtl = themeProvider.GetThemeConfiguration(themeContext.WorkingThemeName).SupportRtl;
-            }
-            return supportRtl;
-        }
-        public string WorkingLanguage()
-        {
-            return WorkContext.WorkingLanguage.UniqueSeoCode;
-        }
-
     }
 }

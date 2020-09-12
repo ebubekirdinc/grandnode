@@ -6,12 +6,12 @@
     ViewBag.Title = T("Admin.Customers.Products.AddNew").Text;
 }
 
-<form asp-controller="Customer" asp-action="ProductAddPopup" method="post"
+<form asp-area="Admin" asp-controller="Customer" asp-action="ProductAddPopup" method="post"
       asp-route-CustomerId="@Context.Request.Query["CustomerId"]"
       asp-route-btnId="@Context.Request.Query["btnId"]"
       asp-route-formId="@Context.Request.Query["formId"]"
       asp-route-personalized="@Context.Request.Query["personalized"]">
-    <antiforgery-token />
+    
     <div class="row">
         <div class="col-md-12">
             <div class="x_panel light form-fit">
@@ -27,10 +27,10 @@
                         <div class="form-body">
                             <div class="form-group popup">
                                 <admin-label asp-for="SearchProductName" class="col-sm-4 control-label" />
-                                <div class="col-xs-8 col-md-4 col-sm-4">
+                                <div class="col-8 col-md-4 col-sm-4">
                                     <admin-input asp-for="SearchProductName" />
                                 </div>
-                                <div class="col-xs-8 col-md-4 col-sm-4 mt-mobile-10">
+                                <div class="col-8 col-md-4 col-sm-4 mt-mobile-10">
                                     <div class="btn-group btn-group-devided">
                                         <button class="btn btn-success filter-submit" id="search-products">
                                             <i class="fa fa-search"></i> @T("Admin.Common.Search")
@@ -158,7 +158,7 @@
     });
     </script>
 
-    <script type="text/javascript">
+    <script>
         $(document).ready(function() {
             $('#search-products').click(function() {
                 var grid = $('#products-grid').data('kendoGrid');

@@ -1,10 +1,11 @@
 ﻿
+using Grand.Domain.Data;
+
 namespace Grand.Core.Data
 {
     public class MongoDBDataProvider : IDataProvider
     {
         #region Methods
-
 
         /// <summary>
         /// Initialize database
@@ -15,5 +16,8 @@ namespace Grand.Core.Data
         }
 
         #endregion
+
+        public string ConnectionString => DataSettingsHelper.ConnectionString();
+
     }
 }

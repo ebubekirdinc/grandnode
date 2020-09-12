@@ -1,5 +1,5 @@
 ﻿using Grand.Core;
-using Grand.Core.Domain.Directory;
+using Grand.Domain.Directory;
 using Grand.Framework.Controllers;
 using Grand.Framework.Kendoui;
 using Grand.Framework.Mvc.Filters;
@@ -49,14 +49,14 @@ namespace Grand.Web.Areas.Admin.Controllers
             ILanguageService languageService,
             IStoreService storeService)
         {
-            this._currencyService = currencyService;
-            this._currencyViewModelService = currencyViewModelService;
-            this._currencySettings = currencySettings;
-            this._settingService = settingService;
-            this._dateTimeHelper = dateTimeHelper;
-            this._localizationService = localizationService;
-            this._languageService = languageService;
-            this._storeService = storeService;
+            _currencyService = currencyService;
+            _currencyViewModelService = currencyViewModelService;
+            _currencySettings = currencySettings;
+            _settingService = settingService;
+            _dateTimeHelper = dateTimeHelper;
+            _localizationService = localizationService;
+            _languageService = languageService;
+            _storeService = storeService;
         }
         
         #endregion
@@ -159,6 +159,7 @@ namespace Grand.Web.Areas.Admin.Controllers
 
         #region Create / Edit / Delete
 
+        [PermissionAuthorizeAction(PermissionActionName.Create)]
         public async Task<IActionResult> Create()
         {
             var model = _currencyViewModelService.PrepareCurrencyModel();
@@ -170,6 +171,7 @@ namespace Grand.Web.Areas.Admin.Controllers
             return View(model);
         }
 
+        [PermissionAuthorizeAction(PermissionActionName.Edit)]
         [HttpPost, ParameterBasedOnFormName("save-continue", "continueEditing")]
         public async Task<IActionResult> Create(CurrencyModel model, bool continueEditing)
         {
@@ -186,7 +188,8 @@ namespace Grand.Web.Areas.Admin.Controllers
 
             return View(model);
         }
-        
+
+        [PermissionAuthorizeAction(PermissionActionName.Preview)]
         public async Task<IActionResult> Edit(string id)
         {
             var currency = await _currencyService.GetCurrencyById(id);
@@ -207,6 +210,7 @@ namespace Grand.Web.Areas.Admin.Controllers
             return View(model);
         }
 
+        [PermissionAuthorizeAction(PermissionActionName.Edit)]
         [HttpPost, ParameterBasedOnFormName("save-continue", "continueEditing")]
         public async Task<IActionResult> Edit(CurrencyModel model, bool continueEditing)
         {
@@ -230,7 +234,7 @@ namespace Grand.Web.Areas.Admin.Controllers
                 if (continueEditing)
                 {
                     //selected tab
-                    SaveSelectedTabIndex();
+                    await SaveSelectedTabIndex();
 
                     return RedirectToAction("Edit", new {id = currency.Id});
                 }
@@ -243,7 +247,8 @@ namespace Grand.Web.Areas.Admin.Controllers
             await model.PrepareStoresMappingModel(currency, _storeService, true);
             return View(model);
         }
-        
+
+        [PermissionAuthorizeAction(PermissionActionName.Delete)]
         [HttpPost]
         public async Task<IActionResult> Delete(string id)
         {

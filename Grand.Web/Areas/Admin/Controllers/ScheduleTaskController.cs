@@ -1,4 +1,4 @@
-﻿using Grand.Core.Domain.Tasks;
+﻿using Grand.Domain.Tasks;
 using Grand.Framework.Kendoui;
 using Grand.Framework.Security.Authorization;
 using Grand.Services.Helpers;
@@ -18,23 +18,22 @@ namespace Grand.Web.Areas.Admin.Controllers
     public partial class ScheduleTaskController : BaseAdminController
     {
         #region Fields
+
         private readonly IScheduleTaskService _scheduleTaskService;
-        private readonly IDateTimeHelper _dateTimeHelper;
         private readonly ILocalizationService _localizationService;
-        private readonly IServiceProvider _serviceProvider;
+        private readonly IDateTimeHelper _dateTimeHelper;
+
         #endregion
 
         #region Constructors
         public ScheduleTaskController(
             IScheduleTaskService scheduleTaskService,
-            IDateTimeHelper dateTimeHelper,
             ILocalizationService localizationService,
-            IServiceProvider serviceProvider)
+            IDateTimeHelper dateTimeHelper)
         {
-            this._scheduleTaskService = scheduleTaskService;
-            this._dateTimeHelper = dateTimeHelper;
-            this._localizationService = localizationService;
-            this._serviceProvider = serviceProvider;
+            _scheduleTaskService = scheduleTaskService;
+            _localizationService = localizationService;
+            _dateTimeHelper = dateTimeHelper;
         }
         #endregion
 
@@ -49,9 +48,9 @@ namespace Grand.Web.Areas.Admin.Controllers
                 Type = task.Type,
                 Enabled = task.Enabled,
                 StopOnError = task.StopOnError,
-                LastStartUtc = task.LastStartUtc,
-                LastEndUtc = task.LastNonSuccessEndUtc,
-                LastSuccessUtc = task.LastSuccessUtc,
+                LastStartUtc = task.LastStartUtc.HasValue ? _dateTimeHelper.ConvertToUserTime(task.LastStartUtc.Value, DateTimeKind.Utc) : default(DateTime?),
+                LastEndUtc = task.LastNonSuccessEndUtc.HasValue ? _dateTimeHelper.ConvertToUserTime(task.LastNonSuccessEndUtc.Value, DateTimeKind.Utc) : default(DateTime?),
+                LastSuccessUtc = task.LastSuccessUtc.HasValue ? _dateTimeHelper.ConvertToUserTime(task.LastSuccessUtc.Value, DateTimeKind.Utc) : default(DateTime?),
                 TimeInterval = task.TimeInterval,
             };
             return model;
@@ -63,6 +62,7 @@ namespace Grand.Web.Areas.Admin.Controllers
 
         public IActionResult List() => View();
 
+        [PermissionAuthorizeAction(PermissionActionName.List)]
         [HttpPost]
         public async Task<IActionResult> List(DataSourceRequest command)
         {
@@ -77,6 +77,7 @@ namespace Grand.Web.Areas.Admin.Controllers
             return Json(gridModel);
         }
 
+        [PermissionAuthorizeAction(PermissionActionName.Preview)]
         [HttpGet]
         public async Task<IActionResult> EditScheduler(string id)
         {
@@ -97,6 +98,7 @@ namespace Grand.Web.Areas.Admin.Controllers
             return View(model);
         }
 
+        [PermissionAuthorizeAction(PermissionActionName.Edit)]
         [HttpPost]
         public async Task<IActionResult> EditScheduler(ScheduleTaskModel model)
         {
@@ -108,14 +110,18 @@ namespace Grand.Web.Areas.Admin.Controllers
                 scheduleTask.StopOnError = model.StopOnError;
                 scheduleTask.TimeInterval = model.TimeInterval;
                 await _scheduleTaskService.UpdateTask(scheduleTask);
+                SuccessNotification(_localizationService.GetResource("Admin.System.ScheduleTasks.Updated"));
                 return await EditScheduler(model.Id);
             }
             model.ScheduleTaskName = scheduleTask.ScheduleTaskName;
             model.Type = scheduleTask.Type;
 
+            ErrorNotification(ModelState);
+
             return View(model);
         }
 
+        [PermissionAuthorizeAction(PermissionActionName.Edit)]
         public async Task<IActionResult> RunNow(string id)
         {
             try
@@ -123,7 +129,7 @@ namespace Grand.Web.Areas.Admin.Controllers
                 var scheduleTask = await _scheduleTaskService.GetTaskById(id);
                 if (scheduleTask == null) throw new Exception("Schedule task cannot be loaded");
                 var typeofTask = Type.GetType(scheduleTask.Type);
-                var task = _serviceProvider.GetServices<IScheduleTask>().FirstOrDefault(x => x.GetType() == typeofTask);
+                var task = HttpContext.RequestServices.GetServices<IScheduleTask>().FirstOrDefault(x => x.GetType() == typeofTask);
                 if (task != null)
                 {
                     scheduleTask.LastStartUtc = DateTime.UtcNow;

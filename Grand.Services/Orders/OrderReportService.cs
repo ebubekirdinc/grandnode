@@ -1,10 +1,11 @@
-using Grand.Core;
-using Grand.Core.Data;
-using Grand.Core.Domain.Catalog;
-using Grand.Core.Domain.Orders;
-using Grand.Core.Domain.Payments;
-using Grand.Core.Domain.Shipping;
+using Grand.Domain;
+using Grand.Domain.Data;
+using Grand.Domain.Catalog;
+using Grand.Domain.Orders;
+using Grand.Domain.Payments;
+using Grand.Domain.Shipping;
 using Grand.Services.Helpers;
+using MongoDB.Bson;
 using MongoDB.Driver;
 using MongoDB.Driver.Linq;
 using System;
@@ -35,7 +36,7 @@ namespace Grand.Services.Orders
         /// Ctor
         /// </summary>
         /// <param name="orderRepository">Order repository</param>
-        /// <param name="productAlsoPurchased">Product also purchased repository</param>
+        /// <param name="productAlsoPurchasedRepository">Product also purchased repository</param>
         /// <param name="productRepository">Product repository</param>
         /// <param name="dateTimeHelper">Datetime helper</param>
         public OrderReportService(IRepository<Order> orderRepository,
@@ -43,10 +44,10 @@ namespace Grand.Services.Orders
             IRepository<Product> productRepository,
             IDateTimeHelper dateTimeHelper)
         {
-            this._orderRepository = orderRepository;
-            this._productAlsoPurchasedRepository = productAlsoPurchasedRepository;
-            this._productRepository = productRepository;
-            this._dateTimeHelper = dateTimeHelper;
+            _orderRepository = orderRepository;
+            _productAlsoPurchasedRepository = productAlsoPurchasedRepository;
+            _productRepository = productRepository;
+            _dateTimeHelper = dateTimeHelper;
         }
 
         #endregion
@@ -193,14 +194,15 @@ namespace Grand.Services.Orders
         /// <param name="endTimeUtc">End date</param>
         /// <param name="billingEmail">Billing email. Leave empty to load all records.</param>
         /// <param name="ignoreCancelledOrders">A value indicating whether to ignore cancelled orders</param>
-        /// <param name="orderNotes">Search in order notes. Leave empty to load all records.</param>
+        /// <param name="tagid">Tag ident.</param>
         /// <returns>Result</returns>
         public virtual async Task<OrderAverageReportLine> GetOrderAverageReportLine(string storeId = "",
             string vendorId = "", string billingCountryId = "", 
             string orderId = "", string paymentMethodSystemName = null,
             OrderStatus? os = null, PaymentStatus? ps = null, ShippingStatus? ss = null,
             DateTime? startTimeUtc = null, DateTime? endTimeUtc = null,
-            string billingEmail = null, string billingLastName = "", bool ignoreCancelledOrders = false)
+            string billingEmail = null, string billingLastName = "", bool ignoreCancelledOrders = false, 
+            string tagid = null)
         {
             int? orderStatusId = null;
             if (os.HasValue)
@@ -261,6 +263,10 @@ namespace Grand.Services.Orders
 
             if (!String.IsNullOrEmpty(billingLastName))
                 filter = filter & builder.Where(o => o.BillingAddress != null && !String.IsNullOrEmpty(o.BillingAddress.LastName) && o.BillingAddress.LastName.Contains(billingLastName));
+
+            //tag filtering 
+            if (!string.IsNullOrEmpty(tagid))
+                filter = filter & builder.Where(o => o.OrderTags.Any(y => y == tagid));
 
             var query = await _orderRepository.Collection
                     .Aggregate()
@@ -426,33 +432,44 @@ namespace Grand.Services.Orders
                 filter = filter & builder.Where(o => createdFromUtc.Value <= o.CreatedOnUtc);
             if (createdToUtc.HasValue)
                 filter = filter & builder.Where(o => createdToUtc.Value >= o.CreatedOnUtc);
+
+            FilterDefinition<BsonDocument> filterPublishedProduct = new BsonDocument("Product.Published", true);
+            var groupBy = new BsonDocument
+            {
+                 new BsonElement("_id", "$OrderItems.ProductId"),
+                 new BsonElement("TotalAmount", new BsonDocument("$sum", "$OrderItems.PriceExclTax")),
+                 new BsonElement("TotalQuantity", new BsonDocument("$sum", "$OrderItems.Quantity"))
+            };
+
             var query = _orderRepository.Collection
-                    .Aggregate()
-                    .Match(filter)
-                    .Unwind<Order, UnwindedOrderItem>(x => x.OrderItems)
-                    .Match(filterItem)
-                    .Group(x => x.OrderItems.ProductId, g => new BestsellersReportLine
-                    {
-                        ProductId = g.Key,
-                        TotalAmount = g.Sum(x => x.OrderItems.PriceExclTax),
-                        TotalQuantity = g.Sum(x => x.OrderItems.Quantity),
-                    });
+                .Aggregate()
+                .Match(filter)
+                .Unwind<Order, UnwindedOrderItem>(x => x.OrderItems)
+                .Match(filterItem)
+                .Lookup("Product", "OrderItems.ProductId", "_id", "Product")
+                .Match(filterPublishedProduct)
+                .Group(groupBy);
 
             if (orderBy == 1)
             {
-
-                query = query.SortByDescending(x => x.TotalQuantity);
-
+                query = query.SortByDescending(x=>x["TotalQuantity"]);
             }
             else
             {
-                query = query.SortByDescending(x => x.TotalAmount);
+                query = query.SortByDescending(x => x["TotalAmount"]);
             }
 
-            var query2 = await query.ToListAsync();
+            var query2 = new List<BestsellersReportLine>();
+            await query.ForEachAsync(q =>
+            {
+                var line = new BestsellersReportLine();
+                line.ProductId = q["_id"].ToString();
+                line.TotalAmount = q["TotalAmount"].AsDecimal;
+                line.TotalQuantity = q["TotalQuantity"].AsInt32;
+                query2.Add(line);
+            });
             var result = new PagedList<BestsellersReportLine>(query2, pageIndex, pageSize);
             return result;
-
         }
 
 
@@ -568,13 +585,13 @@ namespace Grand.Services.Orders
         /// <param name="ps">Order payment status; null to load all records</param>
         /// <param name="ss">Shipping status; null to load all records</param>
         /// <param name="billingEmail">Billing email. Leave empty to load all records.</param>
-        /// <param name="orderNotes">Search in order notes. Leave empty to load all records.</param>
+        /// <param name="tagid">Tag ident.</param>
         /// <returns>Result</returns>
         public virtual async Task<decimal> ProfitReport(string storeId = "", string vendorId = "",
             string billingCountryId = "", string orderId = "", string paymentMethodSystemName = null,
             OrderStatus? os = null, PaymentStatus? ps = null, ShippingStatus? ss = null,
             DateTime? startTimeUtc = null, DateTime? endTimeUtc = null,
-            string billingEmail = null, string billingLastName = "")
+            string billingEmail = null, string billingLastName = "", string tagid = null)
         {
             int? orderStatusId = null;
             if (os.HasValue)
@@ -621,6 +638,10 @@ namespace Grand.Services.Orders
             if (!String.IsNullOrEmpty(billingLastName))
                 query = query.Where(o => o.BillingAddress != null && !String.IsNullOrEmpty(o.BillingAddress.LastName) && o.BillingAddress.LastName.Contains(billingLastName));
 
+            //tag filtering 
+            if (!string.IsNullOrEmpty(tagid))
+                query = query.Where(o => o.OrderTags.Any(y => y == tagid));
+
             var query2 = from o in query
                     from p in o.OrderItems
                     select p;
@@ -639,7 +660,8 @@ namespace Grand.Services.Orders
                 ss: ss,
                 startTimeUtc: startTimeUtc,
                 endTimeUtc: endTimeUtc,
-                billingEmail: billingEmail
+                billingEmail: billingEmail,
+                tagid: tagid
                 );
             var profit = Convert.ToDecimal(reportSummary.SumOrders - reportSummary.SumShippingExclTax - reportSummary.SumTax - productCost);
             return profit;

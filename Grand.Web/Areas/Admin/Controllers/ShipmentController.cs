@@ -1,33 +1,24 @@
 ﻿using Grand.Core;
-using Grand.Core.Domain.Common;
-using Grand.Core.Domain.Directory;
-using Grand.Core.Domain.Media;
-using Grand.Core.Domain.Orders;
-using Grand.Core.Domain.Shipping;
-using Grand.Core.Domain.Tax;
+using Grand.Domain.Customers;
+using Grand.Domain.Orders;
+using Grand.Domain.Shipping;
 using Grand.Framework.Controllers;
 using Grand.Framework.Kendoui;
+using Grand.Framework.Mvc;
 using Grand.Framework.Mvc.Filters;
 using Grand.Framework.Security.Authorization;
-using Grand.Services.Affiliates;
 using Grand.Services.Catalog;
+using Grand.Services.Commands.Models.Shipping;
 using Grand.Services.Common;
-using Grand.Services.Customers;
-using Grand.Services.Directory;
-using Grand.Services.ExportImport;
+using Grand.Services.Helpers;
 using Grand.Services.Localization;
-using Grand.Services.Logging;
-using Grand.Services.Media;
-using Grand.Services.Messages;
 using Grand.Services.Orders;
 using Grand.Services.Security;
 using Grand.Services.Shipping;
-using Grand.Services.Stores;
-using Grand.Services.Tax;
-using Grand.Services.Vendors;
 using Grand.Web.Areas.Admin.Extensions;
-using Grand.Web.Areas.Admin.Models.Orders;
 using Grand.Web.Areas.Admin.Interfaces;
+using Grand.Web.Areas.Admin.Models.Orders;
+using MediatR;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using System;
@@ -35,7 +26,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
-using Grand.Core.Domain.Customers;
 
 namespace Grand.Web.Areas.Admin.Controllers
 {
@@ -45,119 +35,36 @@ namespace Grand.Web.Areas.Admin.Controllers
         #region Fields
         private readonly IShipmentViewModelService _shipmentViewModelService;
         private readonly IOrderService _orderService;
-        private readonly IOrderProcessingService _orderProcessingService;
         private readonly ILocalizationService _localizationService;
         private readonly IWorkContext _workContext;
-        private readonly IMeasureService _measureService;
         private readonly IPdfService _pdfService;
         private readonly IProductService _productService;
-        private readonly IExportManager _exportManager;
-        private readonly IWorkflowMessageService _workflowMessageService;
-        private readonly ICategoryService _categoryService;
-        private readonly IManufacturerService _manufacturerService;
-        private readonly IProductAttributeService _productAttributeService;
-        private readonly IProductAttributeParser _productAttributeParser;
-        private readonly IProductAttributeFormatter _productAttributeFormatter;
-        private readonly IShoppingCartService _shoppingCartService;
-        private readonly IGiftCardService _giftCardService;
-        private readonly IDownloadService _downloadService;
         private readonly IShipmentService _shipmentService;
-        private readonly IShippingService _shippingService;
-        private readonly IStoreService _storeService;
-        private readonly IVendorService _vendorService;
-        private readonly IAddressAttributeParser _addressAttributeParser;
-        private readonly IAddressAttributeService _addressAttributeService;
-        private readonly IAddressAttributeFormatter _addressAttributeFormatter;
-        private readonly IAffiliateService _affiliateService;
-        private readonly IPictureService _pictureService;
-        private readonly ITaxService _taxService;
-        private readonly IReturnRequestService _returnRequestService;
-        private readonly ICustomerService _customerService;
-        private readonly ICustomerActivityService _customerActivityService;
-        private readonly CurrencySettings _currencySettings;
-        private readonly TaxSettings _taxSettings;
-        private readonly MeasureSettings _measureSettings;
-        private readonly AddressSettings _addressSettings;
-        private readonly ShippingSettings _shippingSettings;
-        private readonly MediaSettings _mediaSettings;
+        private readonly IDateTimeHelper _dateTimeHelper;
+        private readonly IMediator _mediator;
+
         #endregion
 
         public ShipmentController(
             IShipmentViewModelService shipmentViewModelService,
             IOrderService orderService,
-            IOrderProcessingService orderProcessingService,
             ILocalizationService localizationService,
             IWorkContext workContext,
-            IMeasureService measureService,
             IPdfService pdfService,
             IProductService productService,
-            IExportManager exportManager,
-            IWorkflowMessageService workflowMessageService,
-            ICategoryService categoryService,
-            IManufacturerService manufacturerService,
-            IProductAttributeService productAttributeService,
-            IProductAttributeParser productAttributeParser,
-            IProductAttributeFormatter productAttributeFormatter,
-            IShoppingCartService shoppingCartService,
-            IGiftCardService giftCardService,
-            IDownloadService downloadService,
             IShipmentService shipmentService,
-            IShippingService shippingService,
-            IStoreService storeService,
-            IVendorService vendorService,
-            IAddressAttributeParser addressAttributeParser,
-            IAddressAttributeService addressAttributeService,
-            IAddressAttributeFormatter addressAttributeFormatter,
-            IAffiliateService affiliateService,
-            IPictureService pictureService,
-            ITaxService taxService,
-            IReturnRequestService returnRequestService,
-            ICustomerService customerService,
-            ICustomerActivityService customerActivityService,
-            CurrencySettings currencySettings,
-            TaxSettings taxSettings,
-            MeasureSettings measureSettings,
-            AddressSettings addressSettings,
-            ShippingSettings shippingSettings,
-            MediaSettings mediaSettings)
+            IDateTimeHelper dateTimeHelper,
+            IMediator mediator)
         {
-             _shipmentViewModelService = shipmentViewModelService;
-             _orderService = orderService;
-             _orderProcessingService = orderProcessingService;
-             _localizationService = localizationService;
-             _workContext = workContext;
-             _measureService = measureService;
-             _pdfService = pdfService;
-             _productService = productService;
-             _exportManager = exportManager;
-             _workflowMessageService = workflowMessageService;
-             _categoryService = categoryService;
-             _manufacturerService = manufacturerService;
-             _productAttributeService = productAttributeService;
-             _productAttributeParser = productAttributeParser;
-             _productAttributeFormatter = productAttributeFormatter;
-             _shoppingCartService = shoppingCartService;
-             _giftCardService = giftCardService;
-             _downloadService = downloadService;
-             _shipmentService = shipmentService;
-             _shippingService = shippingService;
-             _storeService = storeService;
-             _vendorService = vendorService;
-             _addressAttributeParser = addressAttributeParser;
-             _addressAttributeService = addressAttributeService;
-             _addressAttributeFormatter = addressAttributeFormatter;
-             _affiliateService = affiliateService;
-             _pictureService = pictureService;
-             _taxService = taxService;
-             _returnRequestService = returnRequestService;
-             _customerActivityService = customerActivityService;
-             _currencySettings = currencySettings;
-             _taxSettings = taxSettings;
-             _measureSettings = measureSettings;
-             _addressSettings = addressSettings;
-             _shippingSettings = shippingSettings;
-             _customerService = customerService;
-             _mediaSettings = mediaSettings;
+            _shipmentViewModelService = shipmentViewModelService;
+            _orderService = orderService;
+            _localizationService = localizationService;
+            _workContext = workContext;
+            _pdfService = pdfService;
+            _productService = productService;
+            _shipmentService = shipmentService;
+            _dateTimeHelper = dateTimeHelper;
+            _mediator = mediator;
         }
 
         #region Shipments
@@ -168,6 +75,7 @@ namespace Grand.Web.Areas.Admin.Controllers
             return View(model);
         }
 
+        [PermissionAuthorizeAction(PermissionActionName.List)]
         [HttpPost]
         public async Task<IActionResult> ShipmentListSelect(DataSourceRequest command, ShipmentListModel model)
         {
@@ -186,14 +94,14 @@ namespace Grand.Web.Areas.Admin.Controllers
             {
                 items.Add(await _shipmentViewModelService.PrepareShipmentModel(item, false));
             }
-            var gridModel = new DataSourceResult
-            {
+            var gridModel = new DataSourceResult {
                 Data = items,
                 Total = shipments.totalCount
             };
             return Json(gridModel);
         }
 
+        [PermissionAuthorizeAction(PermissionActionName.List)]
         [HttpPost]
         public async Task<IActionResult> ShipmentsByOrder(string orderId, DataSourceRequest command)
         {
@@ -230,14 +138,14 @@ namespace Grand.Web.Areas.Admin.Controllers
                 foreach (var shipment in shipments)
                     shipmentModels.Add(await _shipmentViewModelService.PrepareShipmentModel(shipment, false));
             }
-            var gridModel = new DataSourceResult
-            {
+            var gridModel = new DataSourceResult {
                 Data = shipmentModels,
                 Total = shipmentModels.Count
             };
             return Json(gridModel);
         }
 
+        [PermissionAuthorizeAction(PermissionActionName.List)]
         [HttpPost]
         public async Task<IActionResult> ShipmentsItemsByShipmentId(string shipmentId, DataSourceRequest command)
         {
@@ -260,8 +168,7 @@ namespace Grand.Web.Areas.Admin.Controllers
 
             //shipments
             var shipmentModel = await _shipmentViewModelService.PrepareShipmentModel(shipment, true);
-            var gridModel = new DataSourceResult
-            {
+            var gridModel = new DataSourceResult {
                 Data = shipmentModel.Items,
                 Total = shipmentModel.Items.Count
             };
@@ -269,6 +176,7 @@ namespace Grand.Web.Areas.Admin.Controllers
             return Json(gridModel);
         }
 
+        [PermissionAuthorizeAction(PermissionActionName.Create)]
         public async Task<IActionResult> AddShipment(string orderId)
         {
             var order = await _orderService.GetOrderById(orderId);
@@ -290,6 +198,7 @@ namespace Grand.Web.Areas.Admin.Controllers
             return View(model);
         }
 
+        [PermissionAuthorizeAction(PermissionActionName.Edit)]
         [HttpPost, ParameterBasedOnFormName("save-continue", "continueEditing")]
         [FormValueRequired("save", "save-continue")]
         public async Task<IActionResult> AddShipment(string orderId, IFormCollection form, bool continueEditing)
@@ -323,8 +232,7 @@ namespace Grand.Web.Areas.Admin.Controllers
                 await _shipmentService.InsertShipment(shipment);
 
                 //add a note
-                await _orderService.InsertOrderNote(new OrderNote
-                {
+                await _orderService.InsertOrderNote(new OrderNote {
                     Note = $"A shipment #{shipment.ShipmentNumber} has been added",
                     DisplayToCustomer = false,
                     CreatedOnUtc = DateTime.UtcNow,
@@ -342,6 +250,7 @@ namespace Grand.Web.Areas.Admin.Controllers
             return RedirectToAction("AddShipment", new { orderId = orderId });
         }
 
+        [PermissionAuthorizeAction(PermissionActionName.Preview)]
         public async Task<IActionResult> ShipmentDetails(string id)
         {
             var shipment = await _shipmentService.GetShipmentById(id);
@@ -368,6 +277,7 @@ namespace Grand.Web.Areas.Admin.Controllers
             return View(model);
         }
 
+        [PermissionAuthorizeAction(PermissionActionName.Delete)]
         [HttpPost]
         public async Task<IActionResult> DeleteShipment(string id)
         {
@@ -379,6 +289,12 @@ namespace Grand.Web.Areas.Admin.Controllers
             if (_workContext.CurrentCustomer.IsStaff() && shipment.StoreId != _workContext.CurrentCustomer.StaffStoreId)
             {
                 return RedirectToAction("List");
+            }
+
+            if (_workContext.CurrentVendor != null && _workContext.CurrentVendor.Id != shipment.VendorId)
+            {
+                ErrorNotification(_localizationService.GetResource("Admin.Orders.Shipments.VendorAccess"));
+                return RedirectToAction("ShipmentDetails", new { id = shipment.Id });
             }
 
             var orderId = shipment.OrderId;
@@ -396,13 +312,12 @@ namespace Grand.Web.Areas.Admin.Controllers
                 var product = await _productService.GetProductById(shipmentItem.ProductId);
                 shipmentItem.ShipmentId = shipment.Id;
                 if (product != null)
-                    await _productService.ReverseBookedInventory(product, shipmentItem);
+                    await _productService.ReverseBookedInventory(product, shipment, shipmentItem);
             }
 
             await _shipmentService.DeleteShipment(shipment);
             //add a note
-            await _orderService.InsertOrderNote(new OrderNote
-            {
+            await _orderService.InsertOrderNote(new OrderNote {
                 Note = $"A shipment #{shipment.ShipmentNumber} has been deleted",
                 DisplayToCustomer = false,
                 CreatedOnUtc = DateTime.UtcNow,
@@ -416,6 +331,7 @@ namespace Grand.Web.Areas.Admin.Controllers
             return RedirectToAction("Edit", "Order", new { Id = order.Id });
         }
 
+        [PermissionAuthorizeAction(PermissionActionName.Edit)]
         [HttpPost, ActionName("ShipmentDetails")]
         [FormValueRequired("settrackingnumber")]
         public async Task<IActionResult> SetTrackingNumber(ShipmentModel model)
@@ -428,6 +344,11 @@ namespace Grand.Web.Areas.Admin.Controllers
             if (_workContext.CurrentCustomer.IsStaff() && shipment.StoreId != _workContext.CurrentCustomer.StaffStoreId)
             {
                 return RedirectToAction("List");
+            }
+            if (_workContext.CurrentVendor != null && _workContext.CurrentVendor.Id != shipment.VendorId)
+            {
+                ErrorNotification(_localizationService.GetResource("Admin.Orders.Shipments.VendorAccess"));
+                return RedirectToAction("ShipmentDetails", new { id = shipment.Id });
             }
 
             var order = await _orderService.GetOrderById(shipment.OrderId);
@@ -445,6 +366,7 @@ namespace Grand.Web.Areas.Admin.Controllers
             return RedirectToAction("ShipmentDetails", new { id = shipment.Id });
         }
 
+        [PermissionAuthorizeAction(PermissionActionName.Edit)]
         [HttpPost, ActionName("ShipmentDetails")]
         [FormValueRequired("setadmincomment")]
         public async Task<IActionResult> SetShipmentAdminComment(ShipmentModel model)
@@ -457,6 +379,11 @@ namespace Grand.Web.Areas.Admin.Controllers
             if (_workContext.CurrentCustomer.IsStaff() && shipment.StoreId != _workContext.CurrentCustomer.StaffStoreId)
             {
                 return RedirectToAction("List");
+            }
+            if (_workContext.CurrentVendor != null && _workContext.CurrentVendor.Id != shipment.VendorId)
+            {
+                ErrorNotification(_localizationService.GetResource("Admin.Orders.Shipments.VendorAccess"));
+                return RedirectToAction("ShipmentDetails", new { id = shipment.Id });
             }
 
             var order = await _orderService.GetOrderById(shipment.OrderId);
@@ -474,6 +401,7 @@ namespace Grand.Web.Areas.Admin.Controllers
             return RedirectToAction("ShipmentDetails", new { id = shipment.Id });
         }
 
+        [PermissionAuthorizeAction(PermissionActionName.Edit)]
         [HttpPost, ActionName("ShipmentDetails")]
         [FormValueRequired("setasshipped")]
         public async Task<IActionResult> SetAsShipped(string id)
@@ -487,6 +415,11 @@ namespace Grand.Web.Areas.Admin.Controllers
             {
                 return RedirectToAction("List");
             }
+            if (_workContext.CurrentVendor != null && _workContext.CurrentVendor.Id != shipment.VendorId)
+            {
+                ErrorNotification(_localizationService.GetResource("Admin.Orders.Shipments.VendorAccess"));
+                return RedirectToAction("ShipmentDetails", new { id = shipment.Id });
+            }
 
             var order = await _orderService.GetOrderById(shipment.OrderId);
             if (order == null)
@@ -499,7 +432,7 @@ namespace Grand.Web.Areas.Admin.Controllers
 
             try
             {
-                await _orderProcessingService.Ship(shipment, true);
+                await _mediator.Send(new ShipCommand() { Shipment = shipment, NotifyCustomer = true });
                 return RedirectToAction("ShipmentDetails", new { id = shipment.Id });
             }
             catch (Exception exc)
@@ -510,6 +443,7 @@ namespace Grand.Web.Areas.Admin.Controllers
             }
         }
 
+        [PermissionAuthorizeAction(PermissionActionName.Edit)]
         [HttpPost, ActionName("ShipmentDetails")]
         [FormValueRequired("saveshippeddate")]
         public async Task<IActionResult> EditShippedDate(ShipmentModel model)
@@ -522,6 +456,11 @@ namespace Grand.Web.Areas.Admin.Controllers
             if (_workContext.CurrentCustomer.IsStaff() && shipment.StoreId != _workContext.CurrentCustomer.StaffStoreId)
             {
                 return RedirectToAction("List");
+            }
+            if (_workContext.CurrentVendor != null && _workContext.CurrentVendor.Id != shipment.VendorId)
+            {
+                ErrorNotification(_localizationService.GetResource("Admin.Orders.Shipments.VendorAccess"));
+                return RedirectToAction("ShipmentDetails", new { id = shipment.Id });
             }
 
             var order = await _orderService.GetOrderById(shipment.OrderId);
@@ -539,7 +478,7 @@ namespace Grand.Web.Areas.Admin.Controllers
                 {
                     throw new Exception("Enter shipped date");
                 }
-                shipment.ShippedDateUtc = model.ShippedDate.ConvertToUtcTime();
+                shipment.ShippedDateUtc = model.ShippedDate.ConvertToUtcTime(_dateTimeHelper);
                 await _shipmentService.UpdateShipment(shipment);
                 return RedirectToAction("ShipmentDetails", new { id = shipment.Id });
             }
@@ -551,6 +490,7 @@ namespace Grand.Web.Areas.Admin.Controllers
             }
         }
 
+        [PermissionAuthorizeAction(PermissionActionName.Edit)]
         [HttpPost, ActionName("ShipmentDetails")]
         [FormValueRequired("setasdelivered")]
         public async Task<IActionResult> SetAsDelivered(string id)
@@ -564,6 +504,11 @@ namespace Grand.Web.Areas.Admin.Controllers
             {
                 return RedirectToAction("List");
             }
+            if (_workContext.CurrentVendor != null && _workContext.CurrentVendor.Id != shipment.VendorId)
+            {
+                ErrorNotification(_localizationService.GetResource("Admin.Orders.Shipments.VendorAccess"));
+                return RedirectToAction("ShipmentDetails", new { id = shipment.Id });
+            }
 
             var order = await _orderService.GetOrderById(shipment.OrderId);
             if (order == null)
@@ -576,7 +521,7 @@ namespace Grand.Web.Areas.Admin.Controllers
 
             try
             {
-                await _orderProcessingService.Deliver(shipment, true);
+                await _mediator.Send(new DeliveryCommand() { Shipment = shipment, NotifyCustomer = true });
                 return RedirectToAction("ShipmentDetails", new { id = shipment.Id });
             }
             catch (Exception exc)
@@ -588,6 +533,7 @@ namespace Grand.Web.Areas.Admin.Controllers
         }
 
 
+        [PermissionAuthorizeAction(PermissionActionName.Edit)]
         [HttpPost, ActionName("ShipmentDetails")]
         [FormValueRequired("savedeliverydate")]
         public async Task<IActionResult> EditDeliveryDate(ShipmentModel model)
@@ -600,6 +546,12 @@ namespace Grand.Web.Areas.Admin.Controllers
             if (_workContext.CurrentCustomer.IsStaff() && shipment.StoreId != _workContext.CurrentCustomer.StaffStoreId)
             {
                 return RedirectToAction("List");
+            }
+
+            if (_workContext.CurrentVendor != null && _workContext.CurrentVendor.Id != shipment.VendorId)
+            {
+                ErrorNotification(_localizationService.GetResource("Admin.Orders.Shipments.VendorAccess"));
+                return RedirectToAction("ShipmentDetails", new { id = shipment.Id });
             }
 
             var order = await _orderService.GetOrderById(shipment.OrderId);
@@ -617,7 +569,7 @@ namespace Grand.Web.Areas.Admin.Controllers
                 {
                     throw new Exception("Enter delivery date");
                 }
-                shipment.DeliveryDateUtc = model.DeliveryDate.ConvertToUtcTime();
+                shipment.DeliveryDateUtc = model.DeliveryDate.ConvertToUtcTime(_dateTimeHelper);
                 await _shipmentService.UpdateShipment(shipment);
                 return RedirectToAction("ShipmentDetails", new { id = shipment.Id });
             }
@@ -629,6 +581,40 @@ namespace Grand.Web.Areas.Admin.Controllers
             }
         }
 
+        [PermissionAuthorizeAction(PermissionActionName.Edit)]
+        [HttpPost, ActionName("ShipmentDetails")]
+        [FormValueRequired("save-generic-attributes")]
+        public async Task<IActionResult> EditGenericAttributes(string id, ShipmentModel model)
+        {
+            var shipment = await _shipmentService.GetShipmentById(id);
+            if (shipment == null)
+                //No order found with the specified id
+                return RedirectToAction("List");
+
+            //a vendor does not have access to this functionality
+            if (_workContext.CurrentVendor != null && !_workContext.CurrentCustomer.IsStaff())
+                return RedirectToAction("ShipmentDetails", new { id = shipment.Id });
+
+            if (_workContext.CurrentCustomer.IsStaff() && shipment.StoreId != _workContext.CurrentCustomer.StaffStoreId)
+            {
+                return RedirectToAction("ShipmentDetails", new { id = shipment.Id });
+            }
+
+            if (_workContext.CurrentVendor != null && _workContext.CurrentVendor.Id != shipment.VendorId)
+            {
+                ErrorNotification(_localizationService.GetResource("Admin.Orders.Shipments.VendorAccess"));
+                return RedirectToAction("ShipmentDetails", new { id = shipment.Id });
+            }
+            shipment.GenericAttributes = model.GenericAttributes;
+            await _shipmentService.UpdateShipment(shipment);
+
+            //selected tab
+            await SaveSelectedTabIndex(persistForTheNextRequest: false);
+
+            return RedirectToAction("ShipmentDetails", new { id = shipment.Id });
+        }
+
+        [PermissionAuthorizeAction(PermissionActionName.Preview)]
         public async Task<IActionResult> PdfPackagingSlip(string shipmentId)
         {
             var shipment = await _shipmentService.GetShipmentById(shipmentId);
@@ -664,6 +650,7 @@ namespace Grand.Web.Areas.Admin.Controllers
             return File(bytes, "application/pdf", string.Format("packagingslip_{0}.pdf", shipment.Id));
         }
 
+        [PermissionAuthorizeAction(PermissionActionName.Export)]
         [HttpPost, ActionName("List")]
         [FormValueRequired("exportpackagingslips-all")]
         public async Task<IActionResult> PdfPackagingSlipAll(ShipmentListModel model)
@@ -675,7 +662,7 @@ namespace Grand.Web.Areas.Admin.Controllers
 
             //load shipments
             var shipments = await _shipmentViewModelService.PrepareShipments(model, 1, 100);
-            
+
             //ensure that we at least one shipment selected
             if (shipments.totalCount == 0)
             {
@@ -692,6 +679,7 @@ namespace Grand.Web.Areas.Admin.Controllers
             return File(bytes, "application/pdf", "packagingslips.pdf");
         }
 
+        [PermissionAuthorizeAction(PermissionActionName.Export)]
         [HttpPost]
         public async Task<IActionResult> PdfPackagingSlipSelected(string selectedIds)
         {
@@ -711,8 +699,7 @@ namespace Grand.Web.Areas.Admin.Controllers
             {
                 foreach (var item in shipments)
                 {
-                    var order = await _orderService.GetOrderById(item.OrderId);
-                    var hasaccess = _workContext.HasAccessToShipment(order, item);
+                    var hasaccess = item.VendorId == _workContext.CurrentVendor.Id;
                     if (hasaccess)
                         shipments_access.Add(item);
                 }
@@ -724,7 +711,7 @@ namespace Grand.Web.Areas.Admin.Controllers
                 {
                     storeId = _workContext.CurrentCustomer.StaffStoreId;
                 }
-                shipments_access = shipments.Where(x=>x.StoreId == storeId || string.IsNullOrEmpty(storeId)).ToList();
+                shipments_access = shipments.Where(x => x.StoreId == storeId || string.IsNullOrEmpty(storeId)).ToList();
             }
             //ensure that we at least one shipment selected
             if (shipments.Count == 0)
@@ -742,6 +729,7 @@ namespace Grand.Web.Areas.Admin.Controllers
             return File(bytes, "application/pdf", "packagingslips.pdf");
         }
 
+        [PermissionAuthorizeAction(PermissionActionName.Edit)]
         [HttpPost]
         public async Task<IActionResult> SetAsShippedSelected(ICollection<string> selectedIds)
         {
@@ -756,8 +744,7 @@ namespace Grand.Web.Areas.Admin.Controllers
             {
                 foreach (var item in shipments)
                 {
-                    var order = await _orderService.GetOrderById(item.OrderId);
-                    var hasaccess = _workContext.HasAccessToShipment(order, item);
+                    var hasaccess = item.VendorId == _workContext.CurrentVendor.Id;
                     if (hasaccess)
                         shipments_access.Add(item);
                 }
@@ -776,7 +763,7 @@ namespace Grand.Web.Areas.Admin.Controllers
             {
                 try
                 {
-                    await _orderProcessingService.Ship(shipment, true);
+                    await _mediator.Send(new ShipCommand() { Shipment = shipment, NotifyCustomer = true });
                 }
                 catch
                 {
@@ -787,6 +774,7 @@ namespace Grand.Web.Areas.Admin.Controllers
             return Json(new { Result = true });
         }
 
+        [PermissionAuthorizeAction(PermissionActionName.Edit)]
         [HttpPost]
         public async Task<IActionResult> SetAsDeliveredSelected(ICollection<string> selectedIds)
         {
@@ -801,8 +789,7 @@ namespace Grand.Web.Areas.Admin.Controllers
             {
                 foreach (var item in shipments)
                 {
-                    var order = await _orderService.GetOrderById(item.OrderId);
-                    var hasaccess = _workContext.HasAccessToShipment(order, item);
+                    var hasaccess = item.VendorId == _workContext.CurrentVendor.Id;
                     if (hasaccess)
                         shipments_access.Add(item);
                 }
@@ -821,7 +808,7 @@ namespace Grand.Web.Areas.Admin.Controllers
             {
                 try
                 {
-                    await _orderProcessingService.Deliver(shipment, true);
+                    await _mediator.Send(new DeliveryCommand() { Shipment = shipment, NotifyCustomer = true });
                 }
                 catch
                 {
@@ -831,6 +818,73 @@ namespace Grand.Web.Areas.Admin.Controllers
 
             return Json(new { Result = true });
         }
+
+        #region Shipment notes
+
+        [PermissionAuthorizeAction(PermissionActionName.Preview)]
+        [HttpPost]
+        public async Task<IActionResult> ShipmentNotesSelect(string shipmentId, DataSourceRequest command)
+        {
+            var shipment = await _shipmentService.GetShipmentById(shipmentId);
+            if (shipment == null)
+                throw new ArgumentException("No shipment found with the specified id");
+
+            if (_workContext.CurrentVendor != null && _workContext.CurrentVendor.Id != shipment.VendorId)
+                return Json(new DataSourceResult());
+
+            if (_workContext.CurrentCustomer.IsStaff() && shipment.StoreId != _workContext.CurrentCustomer.StaffStoreId)
+            {
+                return Content("");
+            }
+            //shipment notes
+            var shipmentNoteModels = await _shipmentViewModelService.PrepareShipmentNotes(shipment);
+            var gridModel = new DataSourceResult {
+                Data = shipmentNoteModels,
+                Total = shipmentNoteModels.Count
+            };
+            return Json(gridModel);
+        }
+
+        [PermissionAuthorizeAction(PermissionActionName.Edit)]
+        public async Task<IActionResult> ShipmentNoteAdd(string shipmentId, string downloadId, bool displayToCustomer, string message)
+        {
+            var shipment = await _shipmentService.GetShipmentById(shipmentId);
+            if (shipment == null)
+                return Json(new { Result = false });
+
+            if (_workContext.CurrentVendor != null && _workContext.CurrentVendor.Id != shipment.VendorId)
+                return Json(new { Result = false });
+
+            if (_workContext.CurrentCustomer.IsStaff() && shipment.StoreId != _workContext.CurrentCustomer.StaffStoreId)
+            {
+                return Json(new { Result = false });
+            }
+            await _shipmentViewModelService.InsertShipmentNote(shipment, downloadId, displayToCustomer, message);
+
+            return Json(new { Result = true });
+        }
+
+        [PermissionAuthorizeAction(PermissionActionName.Delete)]
+        [HttpPost]
+        public async Task<IActionResult> ShipmentNoteDelete(string id, string shipmentId)
+        {
+            var shipment = await _shipmentService.GetShipmentById(shipmentId);
+            if (shipment == null)
+                throw new ArgumentException("No shipment found with the specified id");
+
+            if (_workContext.CurrentVendor != null && _workContext.CurrentVendor.Id != shipment.VendorId)
+                return Json(new { Result = false });
+
+            if (_workContext.CurrentCustomer.IsStaff() && shipment.StoreId != _workContext.CurrentCustomer.StaffStoreId)
+            {
+                return Json(new { Result = false });
+            }
+
+            await _shipmentViewModelService.DeleteShipmentNote(shipment, id);
+
+            return new NullJsonResult();
+        }
+        #endregion
 
         #endregion
     }

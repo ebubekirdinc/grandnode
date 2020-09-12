@@ -1,4 +1,3 @@
-using Microsoft.AspNetCore.Hosting;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -74,7 +73,7 @@ namespace Grand.Core
         public static int GenerateRandomInteger(int min = 0, int max = int.MaxValue)
         {
             var randomNumberBuffer = new byte[10];
-            System.Security.Cryptography.RandomNumberGenerator.Create().GetBytes(randomNumberBuffer);
+            RandomNumberGenerator.Create().GetBytes(randomNumberBuffer);
             return new Random(BitConverter.ToInt32(randomNumberBuffer, 0)).Next(min, max);
         }
 
@@ -240,39 +239,32 @@ namespace Grand.Core
         /// <summary>
         /// Gets or sets application base path
         /// </summary>
-        internal static string BaseDirectory => HostingEnvironment.ContentRootPath;
+        public static string BaseDirectory { get; set; }
 
         /// <summary>
-        ///  Depth-first recursive delete, with handling for descendant directories open in Windows Explorer.
+        /// Maps a virtual path to a physical disk path.
         /// </summary>
-        /// <param name="path">Directory path</param>
-        public static void DeleteDirectory(string path)
+        /// <param name="path">The path to map. E.g. "~/bin"</param>
+        /// <returns>The physical path. E.g. "c:\inetpub\wwwroot\bin"</returns>
+        public static string WebMapPath(string path)
         {
-            if (string.IsNullOrEmpty(path))
-                throw new ArgumentNullException(path);
-
-            //find more info about directory deletion
-            //and why we use this approach at https://stackoverflow.com/questions/329355/cannot-delete-directory-with-directory-deletepath-true
-
-            foreach (var directory in Directory.GetDirectories(path))
-            {
-                DeleteDirectory(directory);
-            }
-
-            try
-            {
-                Directory.Delete(path, true);
-            }
-            catch (IOException)
-            {
-                Directory.Delete(path, true);
-            }
-            catch (UnauthorizedAccessException)
-            {
-                Directory.Delete(path, true);
-            }
+            path = path.Replace("~/", "").TrimStart('/');
+            return Path.Combine(WebRootPath, path);
         }
+        /// <summary>
+        /// Gets or sets web application content files
+        /// </summary>
+        public static string WebRootPath { get; set; }
 
-        public static IWebHostEnvironment HostingEnvironment { get; set; }
+        /// <summary>
+        /// Gets or sets application default cache time minutes
+        /// </summary>
+        public static int CacheTimeMinutes { get; set; }
+
+        /// <summary>
+        /// Gets or sets a value indicating for cookie expires in hours
+        /// </summary>
+        public static int CookieAuthExpires { get; set; }
+
     }
 }

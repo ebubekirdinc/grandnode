@@ -1,7 +1,8 @@
 using Grand.Core;
-using Grand.Core.Domain.Customers;
-using Grand.Services.Events;
-using Grand.Services.Events.Web;
+using Grand.Domain;
+using Grand.Domain.Customers;
+using Grand.Services.Common;
+using Grand.Services.Events.Extensions;
 using Grand.Services.Localization;
 using Grand.Services.Messages;
 using Grand.Services.Orders;
@@ -30,7 +31,7 @@ namespace Grand.Services.Customers
         private readonly RewardPointsSettings _rewardPointsSettings;
         private readonly CustomerSettings _customerSettings;
         private readonly IRewardPointsService _rewardPointsService;
-
+        private readonly IGenericAttributeService _genericAttributeService;
         #endregion
 
         #region Ctor
@@ -43,10 +44,11 @@ namespace Grand.Services.Customers
         /// <param name="newsLetterSubscriptionService">Newsletter subscription service</param>
         /// <param name="localizationService">Localization service</param>
         /// <param name="storeService">Store service</param>
-        /// <param name="eventPublisher">Event publisher</param>
+        /// <param name="mediator">Mediator</param>
         /// <param name="rewardPointsSettings">Reward points settings</param>
         /// <param name="customerSettings">Customer settings</param>
         /// <param name="rewardPointsService">Reward points service</param>
+        /// <param name="genericAttributeService">Generic attribute service</param>
         public CustomerRegistrationService(ICustomerService customerService, 
             IEncryptionService encryptionService, 
             INewsLetterSubscriptionService newsLetterSubscriptionService,
@@ -55,17 +57,19 @@ namespace Grand.Services.Customers
             IMediator mediator,
             RewardPointsSettings rewardPointsSettings,
             CustomerSettings customerSettings,
-            IRewardPointsService rewardPointsService)
+            IRewardPointsService rewardPointsService,
+            IGenericAttributeService genericAttributeService)
         {
-            this._customerService = customerService;
-            this._encryptionService = encryptionService;
-            this._newsLetterSubscriptionService = newsLetterSubscriptionService;
-            this._localizationService = localizationService;
-            this._storeService = storeService;
-            this._mediator = mediator;
-            this._rewardPointsSettings = rewardPointsSettings;
-            this._customerSettings = customerSettings;
-            this._rewardPointsService = rewardPointsService;
+            _customerService = customerService;
+            _encryptionService = encryptionService;
+            _newsLetterSubscriptionService = newsLetterSubscriptionService;
+            _localizationService = localizationService;
+            _storeService = storeService;
+            _mediator = mediator;
+            _rewardPointsSettings = rewardPointsSettings;
+            _customerSettings = customerSettings;
+            _rewardPointsService = rewardPointsService;
+            _genericAttributeService = genericAttributeService;
         }
 
         #endregion
@@ -148,6 +152,10 @@ namespace Grand.Services.Customers
                 return CustomerLoginResults.WrongPassword;
             }
 
+            //2fa required
+            if (customer.GetAttributeFromEntity<bool>(SystemCustomerAttributeNames.TwoFactorEnabled) && _customerSettings.TwoFactorAuthenticationEnabled)
+                return CustomerLoginResults.RequiresTwoFactor;
+            
             //save last login date
             customer.FailedLoginAttempts = 0;
             customer.CannotLoginUntilDateUtc = null;
@@ -385,6 +393,9 @@ namespace Grand.Services.Customers
             customer.PasswordFormat = request.NewPasswordFormat;
             await _customerService.UpdateCustomer(customer);
             await _customerService.InsertCustomerPassword(customer);
+
+            //create new login token
+            await _genericAttributeService.SaveAttribute(customer, SystemCustomerAttributeNames.PasswordToken, Guid.NewGuid().ToString());
 
             return result;
         }

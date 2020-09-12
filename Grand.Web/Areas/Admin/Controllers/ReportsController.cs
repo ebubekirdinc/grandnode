@@ -1,9 +1,9 @@
 ﻿using Grand.Core;
-using Grand.Core.Domain.Catalog;
-using Grand.Core.Domain.Customers;
-using Grand.Core.Domain.Orders;
-using Grand.Core.Domain.Payments;
-using Grand.Core.Domain.Shipping;
+using Grand.Domain.Catalog;
+using Grand.Domain.Customers;
+using Grand.Domain.Orders;
+using Grand.Domain.Payments;
+using Grand.Domain.Shipping;
 using Grand.Framework.Extensions;
 using Grand.Framework.Kendoui;
 using Grand.Framework.Security.Authorization;
@@ -178,6 +178,7 @@ namespace Grand.Web.Areas.Admin.Controllers
 
             return Json(gridModel);
         }
+
         [HttpPost]
         public async Task<IActionResult> BestsellersBriefReportByAmountList(DataSourceRequest command)
         {
@@ -205,14 +206,14 @@ namespace Grand.Web.Areas.Admin.Controllers
             //stores
             model.AvailableStores.Add(new SelectListItem { Text = _localizationService.GetResource("Admin.Common.All"), Value = "" });
             foreach (var s in (await _storeService.GetAllStores()).Where(x => x.Id == storeId || string.IsNullOrWhiteSpace(storeId)))
-                model.AvailableStores.Add(new SelectListItem { Text = s.Name, Value = s.Id.ToString() });
+                model.AvailableStores.Add(new SelectListItem { Text = s.Shortcut, Value = s.Id.ToString() });
 
             //order statuses
-            model.AvailableOrderStatuses = OrderStatus.Pending.ToSelectList(false).ToList();
+            model.AvailableOrderStatuses = OrderStatus.Pending.ToSelectList(HttpContext, false).ToList();
             model.AvailableOrderStatuses.Insert(0, new SelectListItem { Text = _localizationService.GetResource("Admin.Common.All"), Value = "" });
 
             //payment statuses
-            model.AvailablePaymentStatuses = PaymentStatus.Pending.ToSelectList(false).ToList();
+            model.AvailablePaymentStatuses = PaymentStatus.Pending.ToSelectList(HttpContext, false).ToList();
             model.AvailablePaymentStatuses.Insert(0, new SelectListItem { Text = _localizationService.GetResource("Admin.Common.All"), Value = "" });
 
             //billing countries
@@ -230,6 +231,7 @@ namespace Grand.Web.Areas.Admin.Controllers
 
             return View(model);
         }
+
         [HttpPost]
         public async Task<IActionResult> BestsellersReportList(DataSourceRequest command, BestsellersReportModel model)
         {
@@ -332,6 +334,7 @@ namespace Grand.Web.Areas.Admin.Controllers
             var model = new NeverSoldReportModel();
             return View(model);
         }
+
         [HttpPost]
         public async Task<IActionResult> NeverSoldReportList(DataSourceRequest command, NeverSoldReportModel model)
         {
@@ -437,7 +440,7 @@ namespace Grand.Web.Areas.Admin.Controllers
                 {
                     Id = x.Id,
                     OrderNumber = x.OrderNumber,
-                    StoreName = store != null ? store.Name : "Unknown",
+                    StoreName = store != null ? store.Shortcut : "Unknown",
                     OrderTotal = _priceFormatter.FormatPrice(x.OrderTotal, true, false),
                     OrderStatus = x.OrderStatus.GetLocalizedEnum(_localizationService, _workContext),
                     PaymentStatus = x.PaymentStatus.GetLocalizedEnum(_localizationService, _workContext),
@@ -513,19 +516,15 @@ namespace Grand.Web.Areas.Admin.Controllers
             if (!await _permissionService.Authorize(StandardPermissionProvider.ManageCustomers))
                 return AccessDeniedView();
 
-            string storeId = "";
-            if (_workContext.CurrentCustomer.IsStaff())
-                storeId = _workContext.CurrentCustomer.StaffStoreId;
-
             var model = new CountryReportModel
             {
                 //order statuses
-                AvailableOrderStatuses = OrderStatus.Pending.ToSelectList(false).ToList()
+                AvailableOrderStatuses = OrderStatus.Pending.ToSelectList(HttpContext, false).ToList()
             };
             model.AvailableOrderStatuses.Insert(0, new SelectListItem { Text = _localizationService.GetResource("Admin.Common.All"), Value = "" });
 
             //payment statuses
-            model.AvailablePaymentStatuses = PaymentStatus.Pending.ToSelectList(false).ToList();
+            model.AvailablePaymentStatuses = PaymentStatus.Pending.ToSelectList(HttpContext, false).ToList();
             model.AvailablePaymentStatuses.Insert(0, new SelectListItem { Text = _localizationService.GetResource("Admin.Common.All"), Value = "" });
 
             return View(model);
@@ -580,6 +579,7 @@ namespace Grand.Web.Areas.Admin.Controllers
         {
             return View();
         }
+
         [HttpPost]
         public async Task<IActionResult> LowStockReportList(DataSourceRequest command)
         {
@@ -633,7 +633,6 @@ namespace Grand.Web.Areas.Admin.Controllers
         }
 
         #endregion
-
         [HttpPost]
         public async Task<IActionResult> PopularSearchTermsReport(DataSourceRequest command)
         {
@@ -677,6 +676,7 @@ namespace Grand.Web.Areas.Admin.Controllers
             };
             return Json(gridModel);
         }
+
         [HttpPost]
         public async Task<IActionResult> ReportBestCustomersByNumberOfOrdersList(DataSourceRequest command, BestCustomersReportModel model)
         {

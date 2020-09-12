@@ -1,5 +1,5 @@
 ﻿using Grand.Core;
-using Grand.Core.Domain.Customers;
+using Grand.Domain.Customers;
 using Grand.Framework.Kendoui;
 using Grand.Framework.Mvc.Filters;
 using Grand.Framework.Security.Authorization;
@@ -35,10 +35,10 @@ namespace Grand.Web.Areas.Admin.Controllers
             ILocalizationService localizationService,
             IWorkContext workContext)
         {
-            this._vendorViewModelService = vendorViewModelService;
-            this._vendorService = vendorService;
-            this._localizationService = localizationService;
-            this._workContext = workContext;
+            _vendorViewModelService = vendorViewModelService;
+            _vendorService = vendorService;
+            _localizationService = localizationService;
+            _workContext = workContext;
         }
 
         #endregion
@@ -54,6 +54,7 @@ namespace Grand.Web.Areas.Admin.Controllers
             return View(model);
         }
 
+        [PermissionAuthorizeAction(PermissionActionName.List)]
         [HttpPost]
         public async Task<IActionResult> List(DataSourceRequest command, VendorReviewListModel model)
         {
@@ -81,6 +82,7 @@ namespace Grand.Web.Areas.Admin.Controllers
         }
 
         //edit
+        [PermissionAuthorizeAction(PermissionActionName.Preview)]
         public async Task<IActionResult> Edit(string id)
         {
             var vendorReview = await _vendorService.GetVendorReviewById(id);
@@ -94,6 +96,7 @@ namespace Grand.Web.Areas.Admin.Controllers
             return View(model);
         }
 
+        [PermissionAuthorizeAction(PermissionActionName.Edit)]
         [HttpPost, ParameterBasedOnFormName("save-continue", "continueEditing")]
         public async Task<IActionResult> Edit(VendorReviewModel model, bool continueEditing)
         {
@@ -115,6 +118,7 @@ namespace Grand.Web.Areas.Admin.Controllers
         }
 
         //delete
+        [PermissionAuthorizeAction(PermissionActionName.Delete)]
         [HttpPost]
         public async Task<IActionResult> Delete(string id)
         {
@@ -135,6 +139,7 @@ namespace Grand.Web.Areas.Admin.Controllers
         }
 
         [HttpPost]
+        [PermissionAuthorizeAction(PermissionActionName.Edit)]
         public async Task<IActionResult> ApproveSelected(ICollection<string> selectedIds)
         {
             if (selectedIds != null)
@@ -145,6 +150,7 @@ namespace Grand.Web.Areas.Admin.Controllers
         }
 
         [HttpPost]
+        [PermissionAuthorizeAction(PermissionActionName.Edit)]
         public async Task<IActionResult> DisapproveSelected(ICollection<string> selectedIds)
         {
             if (selectedIds != null)

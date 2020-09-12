@@ -65,6 +65,11 @@ namespace Grand.Web.Areas.Admin.Models.Settings
             public bool DisplayEuCookieLawWarning { get; set; }
             public bool DisplayEuCookieLawWarning_OverrideForStore { get; set; }
 
+            [GrandResourceDisplayName("Admin.Configuration.Settings.GeneralCommon.DisplayPrivacyPreference")]
+            public bool DisplayPrivacyPreference { get; set; }
+            public bool DisplayPrivacyPreference_OverrideForStore { get; set; }
+            
+
             [GrandResourceDisplayName("Admin.Configuration.Settings.GeneralCommon.FacebookLink")]
             public string FacebookLink { get; set; }
             public bool FacebookLink_OverrideForStore { get; set; }
@@ -152,14 +157,13 @@ namespace Grand.Web.Areas.Admin.Models.Settings
             public bool ConvertNonWesternChars { get; set; }
             public bool ConvertNonWesternChars_OverrideForStore { get; set; }
 
+            [GrandResourceDisplayName("Admin.Configuration.Settings.GeneralCommon.SeoCharConversion")]
+            public string SeoCharConversion { get; set; }
+            public bool SeoCharConversion_OverrideForStore { get; set; }
+
             [GrandResourceDisplayName("Admin.Configuration.Settings.GeneralCommon.CanonicalUrlsEnabled")]
             public bool CanonicalUrlsEnabled { get; set; }
             public bool CanonicalUrlsEnabled_OverrideForStore { get; set; }
-
-            [GrandResourceDisplayName("Admin.Configuration.Settings.GeneralCommon.WwwRequirement")]
-            public int WwwRequirement { get; set; }
-            public bool WwwRequirement_OverrideForStore { get; set; }
-            public SelectList WwwRequirementValues { get; set; }
 
             [GrandResourceDisplayName("Admin.Configuration.Settings.GeneralCommon.EnableJsBundling")]
             public bool EnableJsBundling { get; set; }
@@ -176,6 +180,11 @@ namespace Grand.Web.Areas.Admin.Models.Settings
             [GrandResourceDisplayName("Admin.Configuration.Settings.GeneralCommon.OpenGraphMetaTags")]
             public bool OpenGraphMetaTags { get; set; }
             public bool OpenGraphMetaTags_OverrideForStore { get; set; }
+
+            [UIHint("Picture")]
+            [GrandResourceDisplayName("Admin.Configuration.Settings.GeneralCommon.StorePicture")]
+            public string StorePictureId { get; set; }
+            public bool StorePictureId_OverrideForStore { get; set; }
         }
 
         public partial class SecuritySettingsModel : BaseGrandModel
@@ -209,6 +218,9 @@ namespace Grand.Web.Areas.Admin.Models.Settings
 
             [GrandResourceDisplayName("Admin.Configuration.Settings.GeneralCommon.CaptchaShowOnRegistrationPage")]
             public bool CaptchaShowOnRegistrationPage { get; set; }
+
+            [GrandResourceDisplayName("Admin.Configuration.Settings.GeneralCommon.CaptchaShowOnPasswordRecoveryPage")]
+            public bool CaptchaShowOnPasswordRecoveryPage { get; set; }
 
             [GrandResourceDisplayName("Admin.Configuration.Settings.GeneralCommon.CaptchaShowOnContactUsPage")]
             public bool CaptchaShowOnContactUsPage { get; set; }
@@ -253,10 +265,6 @@ namespace Grand.Web.Areas.Admin.Models.Settings
 
         public partial class PdfSettingsModel : BaseGrandModel
         {
-            [GrandResourceDisplayName("Admin.Configuration.Settings.GeneralCommon.PdfLetterPageSizeEnabled")]
-            public bool LetterPageSizeEnabled { get; set; }
-            public bool LetterPageSizeEnabled_OverrideForStore { get; set; }
-
             [GrandResourceDisplayName("Admin.Configuration.Settings.GeneralCommon.PdfLogo")]
             [UIHint("Picture")]
             public string LogoPictureId { get; set; }
@@ -266,15 +274,13 @@ namespace Grand.Web.Areas.Admin.Models.Settings
             public bool DisablePdfInvoicesForPendingOrders { get; set; }
             public bool DisablePdfInvoicesForPendingOrders_OverrideForStore { get; set; }
 
-            [GrandResourceDisplayName("Admin.Configuration.Settings.GeneralCommon.InvoiceFooterTextColumn1")]
+            [GrandResourceDisplayName("Admin.Configuration.Settings.GeneralCommon.InvoiceHeaderText")]
+            public string InvoiceHeaderText { get; set; }
+            public bool InvoiceHeaderText_OverrideForStore { get; set; }
 
-            public string InvoiceFooterTextColumn1 { get; set; }
-            public bool InvoiceFooterTextColumn1_OverrideForStore { get; set; }
-
-            [GrandResourceDisplayName("Admin.Configuration.Settings.GeneralCommon.InvoiceFooterTextColumn2")]
-
-            public string InvoiceFooterTextColumn2 { get; set; }
-            public bool InvoiceFooterTextColumn2_OverrideForStore { get; set; }
+            [GrandResourceDisplayName("Admin.Configuration.Settings.GeneralCommon.InvoiceFooterText")]
+            public string InvoiceFooterText { get; set; }
+            public bool InvoiceFooterText_OverrideForStore { get; set; }
 
         }
 
@@ -282,9 +288,6 @@ namespace Grand.Web.Areas.Admin.Models.Settings
         {
             [GrandResourceDisplayName("Admin.Configuration.Settings.GeneralCommon.UseImagesForLanguageSelection")]
             public bool UseImagesForLanguageSelection { get; set; }
-
-            [GrandResourceDisplayName("Admin.Configuration.Settings.GeneralCommon.SeoFriendlyUrlsForLanguagesEnabled")]
-            public bool SeoFriendlyUrlsForLanguagesEnabled { get; set; }
 
             [GrandResourceDisplayName("Admin.Configuration.Settings.GeneralCommon.AutomaticallyDetectLanguage")]
             public bool AutomaticallyDetectLanguage { get; set; }
@@ -294,9 +297,7 @@ namespace Grand.Web.Areas.Admin.Models.Settings
 
             [GrandResourceDisplayName("Admin.Configuration.Settings.GeneralCommon.LoadAllLocalizedPropertiesOnStartup")]
             public bool LoadAllLocalizedPropertiesOnStartup { get; set; }
-
-            [GrandResourceDisplayName("Admin.Configuration.Settings.GeneralCommon.LoadAllUrlRecordsOnStartup")]
-            public bool LoadAllUrlRecordsOnStartup { get; set; }
+            
         }
 
         public partial class FullTextSettingsModel : BaseGrandModel
@@ -305,9 +306,6 @@ namespace Grand.Web.Areas.Admin.Models.Settings
 
             public bool Enabled { get; set; }
 
-            [GrandResourceDisplayName("Admin.Configuration.Settings.GeneralCommon.FullTextSettings.SearchMode")]
-            public int SearchMode { get; set; }
-            public SelectList SearchModeValues { get; set; }
         }
 
         public partial class GoogleAnalyticsSettingsModel : BaseGrandModel

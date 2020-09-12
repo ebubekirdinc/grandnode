@@ -1,9 +1,10 @@
-﻿using Grand.Core.Domain.Polls;
+﻿using Grand.Domain.Polls;
 using Grand.Framework.Kendoui;
 using Grand.Framework.Mvc;
 using Grand.Framework.Mvc.Filters;
 using Grand.Framework.Security.Authorization;
 using Grand.Services.Customers;
+using Grand.Services.Helpers;
 using Grand.Services.Localization;
 using Grand.Services.Polls;
 using Grand.Services.Security;
@@ -26,6 +27,7 @@ namespace Grand.Web.Areas.Admin.Controllers
         private readonly ILocalizationService _localizationService;
         private readonly IStoreService _storeService;
         private readonly ICustomerService _customerService;
+        private readonly IDateTimeHelper _dateTimeHelper;
         #endregion
 
         #region Constructors
@@ -33,13 +35,15 @@ namespace Grand.Web.Areas.Admin.Controllers
         public PollController(IPollService pollService, ILanguageService languageService,
             ILocalizationService localizationService,
             IStoreService storeService,
-            ICustomerService customerService)
+            ICustomerService customerService,
+            IDateTimeHelper dateTimeHelper)
         {
-            this._pollService = pollService;
-            this._languageService = languageService;
-            this._localizationService = localizationService;
-            this._storeService = storeService;
-            this._customerService = customerService;
+            _pollService = pollService;
+            _languageService = languageService;
+            _localizationService = localizationService;
+            _storeService = storeService;
+            _customerService = customerService;
+            _dateTimeHelper = dateTimeHelper;
         }
 
         #endregion
@@ -50,6 +54,7 @@ namespace Grand.Web.Areas.Admin.Controllers
 
         public IActionResult List() => View();
 
+        [PermissionAuthorizeAction(PermissionActionName.List)]
         [HttpPost]
         public async Task<IActionResult> List(DataSourceRequest command)
         {
@@ -58,7 +63,7 @@ namespace Grand.Web.Areas.Admin.Controllers
             {
                 Data = polls.Select(x =>
                 {
-                    var m = x.ToModel();
+                    var m = x.ToModel(_dateTimeHelper);
                     return m;
                 }),
                 Total = polls.TotalCount
@@ -67,6 +72,7 @@ namespace Grand.Web.Areas.Admin.Controllers
             return Json(gridModel);
         }
 
+        [PermissionAuthorizeAction(PermissionActionName.Create)]
         public async Task<IActionResult> Create()
         {
             ViewBag.AllLanguages = await _languageService.GetAllLanguages(true);
@@ -85,12 +91,13 @@ namespace Grand.Web.Areas.Admin.Controllers
             return View(model);
         }
 
+        [PermissionAuthorizeAction(PermissionActionName.Edit)]
         [HttpPost, ParameterBasedOnFormName("save-continue", "continueEditing")]
         public async Task<IActionResult> Create(PollModel model, bool continueEditing)
         {
             if (ModelState.IsValid)
             {
-                var poll = model.ToEntity();
+                var poll = model.ToEntity(_dateTimeHelper);
                 await _pollService.InsertPoll(poll);
 
                 SuccessNotification(_localizationService.GetResource("Admin.ContentManagement.Polls.Added"));
@@ -109,6 +116,7 @@ namespace Grand.Web.Areas.Admin.Controllers
             return View(model);
         }
 
+        [PermissionAuthorizeAction(PermissionActionName.Preview)]
         public async Task<IActionResult> Edit(string id)
         {
             var poll = await _pollService.GetPollById(id);
@@ -116,7 +124,7 @@ namespace Grand.Web.Areas.Admin.Controllers
                 //No poll found with the specified id
                 return RedirectToAction("List");
             ViewBag.AllLanguages = await _languageService.GetAllLanguages(true);
-            var model = poll.ToModel();
+            var model = poll.ToModel(_dateTimeHelper);
             //Store
             await model.PrepareStoresMappingModel(poll, _storeService, false);
             //locales
@@ -130,6 +138,7 @@ namespace Grand.Web.Areas.Admin.Controllers
             return View(model);
         }
 
+        [PermissionAuthorizeAction(PermissionActionName.Edit)]
         [HttpPost, ParameterBasedOnFormName("save-continue", "continueEditing")]
         public async Task<IActionResult> Edit(PollModel model, bool continueEditing)
         {
@@ -140,7 +149,7 @@ namespace Grand.Web.Areas.Admin.Controllers
 
             if (ModelState.IsValid)
             {
-                poll = model.ToEntity(poll);
+                poll = model.ToEntity(poll, _dateTimeHelper);
                 await _pollService.UpdatePoll(poll);
 
                 SuccessNotification(_localizationService.GetResource("Admin.ContentManagement.Polls.Updated"));
@@ -148,7 +157,7 @@ namespace Grand.Web.Areas.Admin.Controllers
                 if (continueEditing)
                 {
                     //selected tab
-                    SaveSelectedTabIndex();
+                    await SaveSelectedTabIndex();
 
                     return RedirectToAction("Edit", new { id = poll.Id });
                 }
@@ -171,6 +180,7 @@ namespace Grand.Web.Areas.Admin.Controllers
             return View(model);
         }
 
+        [PermissionAuthorizeAction(PermissionActionName.Delete)]
         [HttpPost]
         public async Task<IActionResult> Delete(string id)
         {
@@ -192,7 +202,8 @@ namespace Grand.Web.Areas.Admin.Controllers
         #endregion
 
         #region Poll answer
-        
+
+        [PermissionAuthorizeAction(PermissionActionName.List)]
         [HttpPost]
         public async Task<IActionResult> PollAnswers(string pollId, DataSourceRequest command)
         {
@@ -211,6 +222,7 @@ namespace Grand.Web.Areas.Admin.Controllers
             return Json(gridModel);
         }
         //create
+        [PermissionAuthorizeAction(PermissionActionName.Edit)]
         public async Task<IActionResult> PollAnswerCreatePopup(string pollId)
         {
             var model = new PollAnswerModel
@@ -223,6 +235,7 @@ namespace Grand.Web.Areas.Admin.Controllers
             return View(model);
         }
 
+        [PermissionAuthorizeAction(PermissionActionName.Edit)]
         [HttpPost]
         public async Task<IActionResult> PollAnswerCreatePopup(PollAnswerModel model)
         {
@@ -245,6 +258,7 @@ namespace Grand.Web.Areas.Admin.Controllers
         }
 
         //edit
+        [PermissionAuthorizeAction(PermissionActionName.Edit)]
         public async Task<IActionResult> PollAnswerEditPopup(string id, string pollId)
         {
             var pollAnswer = (await _pollService.GetPollById(pollId)).PollAnswers.Where(x => x.Id == id).FirstOrDefault();
@@ -262,6 +276,7 @@ namespace Grand.Web.Areas.Admin.Controllers
             return View(model);
         }
 
+        [PermissionAuthorizeAction(PermissionActionName.Edit)]
         [HttpPost]
         public async Task<IActionResult> PollAnswerEditPopup(PollAnswerModel model)
         {
@@ -288,6 +303,7 @@ namespace Grand.Web.Areas.Admin.Controllers
             return View(model);
         }
 
+        [PermissionAuthorizeAction(PermissionActionName.Delete)]
         [HttpPost]
         public async Task<IActionResult> PollAnswerDelete(PollAnswer answer)
         {

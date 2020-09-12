@@ -1,5 +1,5 @@
 ﻿using Grand.Core;
-using Grand.Core.Domain.Messages;
+using Grand.Domain.Messages;
 using Grand.Framework.Controllers;
 using Grand.Framework.Kendoui;
 using Grand.Framework.Mvc.Filters;
@@ -26,37 +26,38 @@ namespace Grand.Web.Areas.Admin.Controllers
         private readonly ICampaignService _campaignService;
         private readonly ICampaignViewModelService _campaignViewModelService;
         private readonly IEmailAccountService _emailAccountService;
-        private readonly EmailAccountSettings _emailAccountSettings;
         private readonly INewsLetterSubscriptionService _newsLetterSubscriptionService;
         private readonly ILocalizationService _localizationService;
         private readonly IStoreContext _storeContext;
         private readonly IStoreService _storeService;
         private readonly IExportManager _exportManager;
+        private readonly EmailAccountSettings _emailAccountSettings;
 
         public CampaignController(ICampaignService campaignService, ICampaignViewModelService campaignViewModelService,
             IEmailAccountService emailAccountService,
-            EmailAccountSettings emailAccountSettings,
             INewsLetterSubscriptionService newsLetterSubscriptionService,
             ILocalizationService localizationService, 
             IStoreContext storeContext,
             IStoreService storeService,
-            IExportManager exportManager)
-		{
-            this._campaignService = campaignService;
-            this._campaignViewModelService = campaignViewModelService;
-            this._emailAccountService = emailAccountService;
-            this._emailAccountSettings = emailAccountSettings;
-            this._newsLetterSubscriptionService = newsLetterSubscriptionService;
-            this._localizationService = localizationService;
-            this._storeContext = storeContext;
-            this._storeService = storeService;
-            this._exportManager = exportManager;
+            IExportManager exportManager,
+            EmailAccountSettings emailAccountSettings)
+        {
+            _campaignService = campaignService;
+            _campaignViewModelService = campaignViewModelService;
+            _emailAccountService = emailAccountService;
+            _emailAccountSettings = emailAccountSettings;
+            _newsLetterSubscriptionService = newsLetterSubscriptionService;
+            _localizationService = localizationService;
+            _storeContext = storeContext;
+            _storeService = storeService;
+            _exportManager = exportManager;
         }
 
         public IActionResult Index() => RedirectToAction("List");
 
         public IActionResult List() => View();
 
+        [PermissionAuthorizeAction(PermissionActionName.List)]
         [HttpPost]
         public async Task<IActionResult> List(DataSourceRequest command)
         {
@@ -69,6 +70,7 @@ namespace Grand.Web.Areas.Admin.Controllers
             return Json(gridModel);
         }
 
+        [PermissionAuthorizeAction(PermissionActionName.List)]
         [HttpPost]
         public async Task<IActionResult> Customers(string campaignId, DataSourceRequest command)
         {
@@ -83,6 +85,7 @@ namespace Grand.Web.Areas.Admin.Controllers
             return Json(gridModel);
         }
 
+        [PermissionAuthorizeAction(PermissionActionName.Edit)]
         [HttpPost]
         public async Task<IActionResult> History(string campaignId, DataSourceRequest command)
         {
@@ -101,6 +104,7 @@ namespace Grand.Web.Areas.Admin.Controllers
             return Json(gridModel);
         }
 
+        [PermissionAuthorizeAction(PermissionActionName.Export)]
         public async Task<IActionResult> ExportCsv(string campaignId)
         {
             try
@@ -119,12 +123,14 @@ namespace Grand.Web.Areas.Admin.Controllers
             }
         }
 
+        [PermissionAuthorizeAction(PermissionActionName.Create)]
         public async Task<IActionResult> Create()
         {
             var model = await _campaignViewModelService.PrepareCampaignModel();
             return View(model);
         }
 
+        [PermissionAuthorizeAction(PermissionActionName.Edit)]
         [HttpPost, ParameterBasedOnFormName("save-continue", "continueEditing")]
         public async Task<IActionResult> Create(CampaignModel model, bool continueEditing)
         {
@@ -141,6 +147,7 @@ namespace Grand.Web.Areas.Admin.Controllers
             return View(model);
         }
 
+        [PermissionAuthorizeAction(PermissionActionName.Preview)]
         public async Task<IActionResult> Edit(string id)
         {
             var campaign = await _campaignService.GetCampaignById(id);
@@ -152,6 +159,7 @@ namespace Grand.Web.Areas.Admin.Controllers
             return View(model);
         }
 
+        [PermissionAuthorizeAction(PermissionActionName.Edit)]
         [HttpPost]
         [ParameterBasedOnFormName("save-continue", "continueEditing")]
         [FormValueRequired("save", "save-continue")]
@@ -167,7 +175,7 @@ namespace Grand.Web.Areas.Admin.Controllers
                 campaign = await _campaignViewModelService.UpdateCampaignModel(campaign, model);
                 SuccessNotification(_localizationService.GetResource("Admin.Promotions.Campaigns.Updated"));
                 //selected tab
-                SaveSelectedTabIndex();
+                await SaveSelectedTabIndex();
 
                 return continueEditing ? RedirectToAction("Edit", new { id = campaign.Id }) : RedirectToAction("List");
             }
@@ -175,6 +183,7 @@ namespace Grand.Web.Areas.Admin.Controllers
             return View(model);
         }
 
+        [PermissionAuthorizeAction(PermissionActionName.Edit)]
         [HttpPost, ActionName("Edit")]
         [FormValueRequired("send-test-email")]
         public async Task<IActionResult> SendTestEmail(CampaignModel model)
@@ -218,6 +227,7 @@ namespace Grand.Web.Areas.Admin.Controllers
             return View(model);
         }
 
+        [PermissionAuthorizeAction(PermissionActionName.Edit)]
         [HttpPost, ActionName("Edit")]
         [FormValueRequired("send-mass-email")]
         public async Task<IActionResult> SendMassEmail(CampaignModel model)
@@ -253,6 +263,7 @@ namespace Grand.Web.Areas.Admin.Controllers
             return View(model);
         }
 
+        [PermissionAuthorizeAction(PermissionActionName.Delete)]
         [HttpPost]
         public async Task<IActionResult> Delete(string id)
         {

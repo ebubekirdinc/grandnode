@@ -1,6 +1,4 @@
 ﻿@model ActiveDiscussionsModel
-@using Grand.Web.Models.Boards;
-@using Grand.Web.Models.Common;
 @inject Grand.Services.Localization.ILocalizationService localizationService
 <div class="forums-table-section topic-group active-discussions">
     <div class="forums-table-section-title">
@@ -86,7 +84,7 @@
                                                     @if (!String.IsNullOrEmpty(topic.CustomerId))
                                                     {
                                                         <label>@T("Forum.Author"):</label>
-                                                        if (topic.AllowViewingProfiles)
+                                                        if (topic.AllowViewingProfiles && !string.IsNullOrEmpty(topic.CustomerName))
                                                         {
                                                             @Html.RouteLink(topic.CustomerName, "CustomerProfile", new { Id = topic.CustomerId })
                                                         }

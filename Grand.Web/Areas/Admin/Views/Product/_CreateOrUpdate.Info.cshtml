@@ -1,15 +1,16 @@
 ﻿@model ProductModel
 @inject IProductTagService productTagService
+@inject IPageHeadBuilder pagebuilder
 @{
     //resources for product tags input
-    Html.AppendCssFileParts("~/content/tagEditor/jquery.tag-editor.css", excludeFromBundle: true);
-    Html.AppendScriptParts("~/scripts/tagEditor/jquery.tag-editor.min.js", excludeFromBundle: true);
-    Html.AppendScriptParts("~/scripts/tagEditor/jquery.caret.min.js", excludeFromBundle: true);
+    pagebuilder.AppendCssFileParts(ResourceLocation.Head, "~/content/tagEditor/jquery.tag-editor.css", excludeFromBundle: true);
+    pagebuilder.AppendScriptParts(ResourceLocation.Head, "~/scripts/tagEditor/jquery.tag-editor.min.js", excludeFromBundle: true);
+    pagebuilder.AppendScriptParts(ResourceLocation.Head, "~/scripts/tagEditor/jquery.caret.min.js", excludeFromBundle: true);
 }
-@using Grand.Core.Domain.Catalog;
+@using Grand.Domain.Catalog;
 @using Grand.Services.Catalog;
 @using System.Text;
-<script type="text/javascript">
+<script>
     $(document).ready(function() {
 
         @if (!Model.IsLoggedInAsVendor)
@@ -415,7 +416,7 @@
         {
             var tag = productTags[i];
             productTagsSb.Append("'");
-            productTagsSb.Append(System.Text.Encodings.Web.JavaScriptEncoder.Default.Encode(tag.Name));
+            productTagsSb.Append(System.Text.Encodings.Web.JavaScriptEncoder.Default.Encode(string.IsNullOrEmpty(tag.Name) ? "": tag.Name));
             productTagsSb.Append("'");
             if (i != productTags.Count - 1)
             {
@@ -490,7 +491,7 @@
         <div class="form-group">
             <admin-label asp-for="ProductTypeId" />
             <div class="col-md-9 col-sm-9">
-                <admin-select asp-for="ProductTypeId" asp-items="((ProductType)Model.ProductTypeId).ToSelectList()" />
+                <admin-select asp-for="ProductTypeId" asp-items="((ProductType)Model.ProductTypeId).ToSelectList(Context)" />
                 <span asp-validation-for="ProductTypeId"></span>
             </div>
         </div>
@@ -499,7 +500,7 @@
             <div class="col-md-9 col-sm-9">
                 <label class="mt-checkbox mt-checkbox-outline control control-checkbox">
                     <admin-input asp-for="VisibleIndividually" />
-                     <div class="control__indicator"></div>
+                    <div class="control__indicator"></div>
                 </label>
                 <span asp-validation-for="VisibleIndividually"></span>
             </div>
@@ -524,7 +525,7 @@
         </div>
     </div>
 </div>
-@(Html.LocalizedEditor<ProductModel, ProductLocalizedModel>("product-info-localized",
+@(await Html.LocalizedEditor<ProductModel, ProductLocalizedModel>("product-info-localized",
     @<div class="form-horizontal portlet bg-inverse form-fit">
         <div class="form-body">
             <div class="form-group">
@@ -581,9 +582,9 @@
 <div class="form-horizontal">
     <div class="form-body">
         <div class="form-group">
-            <admin-label asp-for="Flag"/>
+            <admin-label asp-for="Flag" />
             <div class="col-md-9 col-sm-9">
-                <admin-input asp-for="Flag"/>
+                <admin-input asp-for="Flag" />
                 <span asp-validation-for="Flag"></span>
             </div>
         </div>
@@ -606,7 +607,7 @@
             <div class="col-md-9 col-sm-9">
                 <label class="mt-checkbox mt-checkbox-outline control control-checkbox">
                     <admin-input asp-for="ShowOnHomePage" />
-                     <div class="control__indicator"></div>
+                    <div class="control__indicator"></div>
                 </label>
                 <span asp-validation-for="ShowOnHomePage"></span>
             </div>
@@ -623,7 +624,7 @@
             <div class="col-md-9 col-sm-9">
                 <label class="mt-checkbox mt-checkbox-outline control control-checkbox">
                     <admin-input asp-for="AllowCustomerReviews" />
-                     <div class="control__indicator"></div>
+                    <div class="control__indicator"></div>
                 </label>
                 <span asp-validation-for="AllowCustomerReviews"></span>
             </div>
@@ -679,7 +680,7 @@
             <div class="col-md-9 col-sm-9">
                 <label class="mt-checkbox mt-checkbox-outline control control-checkbox">
                     <admin-input asp-for="MarkAsNew" />
-                     <div class="control__indicator"></div>
+                    <div class="control__indicator"></div>
                 </label>
                 <span asp-validation-for="MarkAsNew"></span>
             </div>
@@ -703,7 +704,7 @@
             <div class="col-md-9 col-sm-9">
                 <label class="mt-checkbox mt-checkbox-outline control control-checkbox">
                     <admin-input asp-for="Published" />
-                     <div class="control__indicator"></div>
+                    <div class="control__indicator"></div>
                 </label>
                 <span asp-validation-for="Published"></span>
             </div>

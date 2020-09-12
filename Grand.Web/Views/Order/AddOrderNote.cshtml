@@ -1,15 +1,15 @@
 ﻿@model AddOrderNoteModel
-
+@inject IPageHeadBuilder pagebuilder
 @{
     Layout = "_ColumnsOne";
 
     //title
-    Html.AddTitleParts(T("PageTitle.OrderDetails").Text);
+    pagebuilder.AddTitleParts(T("PageTitle.OrderDetails").Text);
 }
 <div class="page order-details-page mb-3">
     <h2 class="generalTitle text-center">@T("Order.AddOrdernote")</h2>
     <div class="write-review" id="review-form">
-        <form asp-route="ProductReviews" method="post">
+        <form asp-route="AddOrderNote" method="post">
             <input asp-for="OrderId" type="hidden" />
             <div asp-validation-summary="ModelOnly" class="message-error"></div>
             <fieldset>

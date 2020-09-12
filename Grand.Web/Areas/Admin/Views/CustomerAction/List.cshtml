@@ -2,7 +2,7 @@
     //page title
     ViewBag.Title = T("Admin.Customers.CustomerActions").Text;
 }
-<antiforgery-token />
+
 <div class="row">
     <div class="col-md-12">
         <div class="x_panel light form-fit">
@@ -12,7 +12,7 @@
                     @T("Admin.Customers.CustomerActions")
                 </div>
                 <div class="actions">
-                    <a href="@Url.Action("Create")" class="btn green"><i class="fa fa-plus"></i><span class="hidden-xs"> @T("Admin.Common.AddNew") </span></a>
+                    <a href="@Url.Action("Create")" class="btn green"><i class="fa fa-plus"></i><span class="d-none d-sm-inline"> @T("Admin.Common.AddNew") </span></a>
                 </div>
             </div>
             <div class="x_content form">

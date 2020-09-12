@@ -1,5 +1,5 @@
 ﻿using Grand.Core;
-using Grand.Core.Domain.Localization;
+using Grand.Domain.Localization;
 using Grand.Services.Directory;
 using Grand.Services.Localization;
 using Grand.Web.Areas.Admin.Extensions;
@@ -43,7 +43,7 @@ namespace Grand.Web.Areas.Admin.Services
                 throw new ArgumentNullException("model");
 
             model.FlagFileNames = Directory
-                .EnumerateFiles(CommonHelper.MapPath("~/wwwroot/content/images/flags/"), "*.png", SearchOption.TopDirectoryOnly)
+                .EnumerateFiles(CommonHelper.WebMapPath("/content/images/flags/"), "*.png", SearchOption.TopDirectoryOnly)
                 .Select(Path.GetFileName)
                 .ToList();
         }

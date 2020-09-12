@@ -1,11 +1,9 @@
-﻿using FluentValidation.Attributes;
-using Grand.Framework.Mvc.ModelBinding;
+﻿using Grand.Framework.Mvc.ModelBinding;
 using Grand.Framework.Mvc.Models;
-using Grand.Web.Areas.Admin.Validators.Customers;
+using System.ComponentModel.DataAnnotations;
 
 namespace Grand.Web.Areas.Admin.Models.Customers
 {
-    [Validator(typeof(CustomerRoleValidator))]
     public partial class CustomerRoleModel : BaseGrandEntityModel
     {
         [GrandResourceDisplayName("Admin.Customers.CustomerRoles.Fields.Name")]
@@ -30,6 +28,14 @@ namespace Grand.Web.Areas.Admin.Models.Customers
 
         [GrandResourceDisplayName("Admin.Customers.CustomerRoles.Fields.EnablePasswordLifetime")]
         public bool EnablePasswordLifetime { get; set; }
+
+        [GrandResourceDisplayName("Admin.Customers.CustomerRoles.Fields.MinOrderAmount")]
+        [UIHint("DecimalNullable")]
+        public decimal? MinOrderAmount { get; set; }
+
+        [GrandResourceDisplayName("Admin.Customers.CustomerRoles.Fields.MaxOrderAmount")]
+        [UIHint("DecimalNullable")]
+        public decimal? MaxOrderAmount { get; set; }
 
     }
 }

@@ -1,11 +1,10 @@
 ﻿@model Grand.Web.Models.Boards.SearchModel
-@using Grand.Core.Domain.Forums;
-@using Grand.Web.Models.Common;
 @inject Grand.Services.Localization.ILocalizationService localizationService
+@inject IPageHeadBuilder pagebuilder
 @{
     Layout = "_ColumnsOne";
 
-    Html.AddTitleParts(T("Forum.PageTitle.Search").Text);
+    pagebuilder.AddTitleParts(T("Forum.PageTitle.Search").Text);
 }
 <script asp-location="Footer">
     $(document).ready(function () {
@@ -188,7 +187,7 @@
                                             @if (!String.IsNullOrEmpty(topic.CustomerId))
                                             {
                                                 <label>@T("Forum.Author"):</label>
-                                                if (topic.AllowViewingProfiles)
+                                                if (topic.AllowViewingProfiles && !string.IsNullOrEmpty(topic.CustomerName))
                                                 {
                                                     @Html.RouteLink(topic.CustomerName, "CustomerProfile", new { Id = topic.CustomerId })
                                                 }
